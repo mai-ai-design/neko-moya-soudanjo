@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ねこモヤ相談所</title>
+    <meta
+      name="description"
+      content="猫の体調や暮らしの不安を、やさしい言葉で整理するためのフロントエンドプロトタイプです。"
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <button class="brand nav-link" type="button" data-view="home" aria-label="ホームへ">
+          <span class="brand-mark" aria-hidden="true">🐾</span>
+          <span>ねこモヤ相談所</span>
+        </button>
+        <p class="header-note">診断ではなく、不安を整理するための場所です。</p>
+      </header>
+
+      <main>
+        <section id="home" class="view is-active" aria-labelledby="home-title">
+          <div class="hero">
+            <div class="moon-cat" aria-hidden="true">
+              <span class="cat-face">=^._.^=</span>
+            </div>
+            <p class="eyebrow">にゃんとなく不安な夜に。</p>
+            <h1 id="home-title">その心配、<br>いっしょに見てみよう。</h1>
+            <p class="lead">
+              病院に行く？様子を見る？迷ったときの、猫の保健室。
+            </p>
+            <div class="hero-actions">
+              <button class="primary-btn nav-link" type="button" data-view="symptoms">症状から探す</button>
+              <button class="secondary-btn nav-link" type="button" data-view="check">受診目安をチェックする</button>
+              <button class="secondary-btn nav-link" type="button" data-view="chat">AIに相談してみる</button>
+              <button class="ghost-btn nav-link" type="button" data-view="profile">うちの子情報を登録する</button>
+              <button class="ghost-btn nav-link" type="button" data-view="life">暮らしのお悩みを見る</button>
+            </div>
+          </div>
+
+          <div class="notice-card emergency">
+            <strong>大切なお知らせ</strong>
+            <p>
+              このサイトは診断ではありません。不安が強い場合や症状が続く場合は、動物病院へ相談してください。
+              呼吸が苦しそう、ぐったりしている、何度も吐く、血が混じるなどの緊急症状がある場合は、すぐに動物病院へ連絡しましょう。
+            </p>
+          </div>
+
+          <section class="section-block" aria-labelledby="home-guide-title">
+            <h2 id="home-guide-title">今夜できる3つの整理</h2>
+            <div class="mini-grid">
+              <article class="soft-card">
+                <span class="icon-dot">1</span>
+                <h3>症状を見つける</h3>
+                <p>気になる症状の「見ておきたいポイント」を確認します。</p>
+              </article>
+              <article class="soft-card">
+                <span class="icon-dot">2</span>
+                <h3>受診目安を見る</h3>
+                <p>断定せず、相談の優先度をやさしく整理します。</p>
+              </article>
+              <article class="soft-card">
+                <span class="icon-dot">3</span>
+                <h3>メモにまとめる</h3>
+                <p>病院でそのまま見せられる形に整えます。</p>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section id="symptoms" class="view" aria-labelledby="symptoms-title">
+          <div class="page-heading">
+            <p class="eyebrow">症状から探す</p>
+            <h1 id="symptoms-title">気になる様子を選んでください</h1>
+            <p>よくある原因、見ておきたいポイント、相談サインをまとめました。</p>
+          </div>
+          <div id="symptomGrid" class="card-grid"></div>
+        </section>
+
+        <section id="check" class="view" aria-labelledby="check-title">
+          <div class="page-heading">
+            <p class="eyebrow">受診目安チェック</p>
+            <h1 id="check-title">いまの様子を一緒に確認しましょう</h1>
+            <p>当てはまるものを選ぶと、相談の目安を3段階で表示します。</p>
+          </div>
+
+          <form id="triageForm" class="form-card">
+            <fieldset>
+              <legend>まず、緊急に近い様子はありますか？</legend>
+              <label><input type="checkbox" name="urgent" value="breathing"> 呼吸が苦しそう、ぐったりしている</label>
+              <label><input type="checkbox" name="urgent" value="blood"> 血が混じる、強い痛みがありそう</label>
+              <label><input type="checkbox" name="urgent" value="repeat"> 何度も吐く、下痢が続く、水も飲めない</label>
+            </fieldset>
+            <fieldset>
+              <legend>早めに相談したい変化はありますか？</legend>
+              <label><input type="checkbox" name="soon" value="appetite"> 食欲が半日以上落ちている</label>
+              <label><input type="checkbox" name="soon" value="toilet"> トイレの回数や量がいつもと違う</label>
+              <label><input type="checkbox" name="soon" value="mouth"> 口臭、歯ぐきの赤み、よだれが気になる</label>
+              <label><input type="checkbox" name="soon" value="energy"> 元気がなく、隠れる時間が増えた</label>
+            </fieldset>
+            <fieldset>
+              <legend>記録して見守れそうな範囲ですか？</legend>
+              <label><input type="checkbox" name="record" value="once"> 吐いたのは1回で、その後は落ち着いている</label>
+              <label><input type="checkbox" name="record" value="mild"> 食欲や元気はおおむね普段どおり</label>
+              <label><input type="checkbox" name="record" value="note"> 写真や回数を記録できそう</label>
+            </fieldset>
+            <button class="primary-btn" type="submit">目安を見る</button>
+          </form>
+
+          <div id="triageResult" class="result-card" aria-live="polite">
+            <span class="result-label">チェック結果</span>
+            <h2>選択すると、ここに目安が表示されます。</h2>
+            <p>迷うときは、無理に判断しようとせず動物病院に相談してください。</p>
+          </div>
+        </section>
+
+        <section id="profile" class="view" aria-labelledby="profile-title">
+          <div class="page-heading">
+            <p class="eyebrow">うちの子プロフィール</p>
+            <h1 id="profile-title">病院や相談前に役立つ基本情報</h1>
+            <p>入力内容はこの画面の中だけで扱うプロトタイプです。</p>
+          </div>
+          <form id="profileForm" class="form-card two-column"></form>
+          <div id="profilePreview" class="memo-output"></div>
+        </section>
+
+        <section id="chat" class="view" aria-labelledby="chat-title">
+          <div class="page-heading">
+            <p class="eyebrow">AI相談チャット風</p>
+            <h1 id="chat-title">気になることを短く書いてみてください</h1>
+            <p>返答は一般的な整理用です。緊急時は動物病院へ相談してください。</p>
+          </div>
+          <div class="chat-panel">
+            <div id="chatLog" class="chat-log">
+              <div class="chat-bubble ai">
+                こんばんは。心配な気持ちを、まずは一緒にほどいていきましょう。どんな様子が気になっていますか？
+              </div>
+            </div>
+            <div class="example-chips" aria-label="入力例">
+              <button type="button" data-chat="昨日から2回吐いています">昨日から2回吐いています</button>
+              <button type="button" data-chat="口が臭くて歯ぐきが赤いです">口が臭くて歯ぐきが赤いです</button>
+              <button type="button" data-chat="最近太ってきた気がします">最近太ってきた気がします</button>
+              <button type="button" data-chat="夜になると鳴きます">夜になると鳴きます</button>
+            </div>
+            <form id="chatForm" class="chat-form">
+              <label class="sr-only" for="chatInput">相談内容</label>
+              <textarea id="chatInput" rows="3" placeholder="例：昨日から2回吐いています"></textarea>
+              <button class="primary-btn" type="submit">送る</button>
+            </form>
+          </div>
+        </section>
+
+        <section id="life" class="view" aria-labelledby="life-title">
+          <div class="page-heading">
+            <p class="eyebrow">暮らしのお悩み</p>
+            <h1 id="life-title">毎日の困りごとも、少しずつ軽く</h1>
+            <p>今日からできる対策と、注意したいポイントをまとめました。</p>
+          </div>
+          <div id="lifeGrid" class="card-grid"></div>
+        </section>
+
+        <section id="memo" class="view" aria-labelledby="memo-title">
+          <div class="page-heading">
+            <p class="eyebrow">病院に行く前メモ</p>
+            <h1 id="memo-title">獣医さんに見せるメモを作りましょう</h1>
+            <p>いつから、何が、どのくらい起きているかを整理できます。</p>
+          </div>
+          <form id="memoForm" class="form-card two-column"></form>
+          <div id="memoOutput" class="memo-output">
+            <h2>病院で見せるメモ</h2>
+            <p>入力すると、ここにメモ形式でまとまります。</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="スマホ用ナビゲーション">
+      <button class="nav-link is-current" type="button" data-view="home">
+        <span>⌂</span>ホーム
+      </button>
+      <button class="nav-link" type="button" data-view="symptoms">
+        <span>✦</span>症状
+      </button>
+      <button class="nav-link" type="button" data-view="check">
+        <span>✓</span>チェック
+      </button>
+      <button class="nav-link" type="button" data-view="chat">
+        <span>💬</span>相談
+      </button>
+      <button class="nav-link" type="button" data-view="memo">
+        <span>✎</span>メモ
+      </button>
+    </nav>
+
+    <script src="script.js"></script>
+  </body>
+</html>
