@@ -720,9 +720,9 @@ textarea {
 
   .hero-mascot {
     position: static;
-    justify-self: center;
-    height: 80px;
-    margin: 0 auto 12px;
+    justify-self: start;
+    height: 56px;
+    margin: 0 0 12px;
   }
 }
 
