@@ -719,10 +719,16 @@ textarea {
   }
 
   .hero-mascot {
-    position: static;
-    justify-self: start;
+    position: absolute;
+    top: 16px;
+    right: 16px;
     height: 56px;
-    margin: 0 0 12px;
+    margin: 0;
+  }
+
+  .hero .eyebrow,
+  .hero h1 {
+    padding-right: 72px;
   }
 }
 
