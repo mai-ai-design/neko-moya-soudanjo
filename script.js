@@ -183,7 +183,90 @@ const dangerQuestions = [
   }
 ];
 
+const vomitFollowupQuestions = [
+  {
+    id: "vomit_started_at",
+    category: "timing",
+    label: "吐き始め",
+    text: "吐いたのはいつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "それより前", "分からない"]
+  },
+  {
+    id: "vomit_count",
+    category: "frequency",
+    label: "回数",
+    text: "これまでに何回くらい吐きましたか？",
+    type: "single",
+    options: ["1回", "2〜3回", "4回以上", "数えられない・何度も", "分からない"]
+  },
+  {
+    id: "vomit_content",
+    category: "content",
+    label: "吐いたもの",
+    text: "吐いたものに近いものを選んでください。",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["フード・食べたもの", "毛玉", "透明な液体・泡っぽいもの", "黄色っぽい液体", "血のようなもの", "その他", "よく分からない"],
+    notices: {
+      "血のようなもの": "⚠️ 吐いたものに血のように見えるものが混じっている場合は、動物病院への相談を検討してください。"
+    }
+  },
+  {
+    id: "meal_timing",
+    category: "mealTiming",
+    label: "食事とのタイミング",
+    text: "食事とのタイミングはどうでしたか？",
+    type: "single",
+    options: ["食べてすぐ", "食べてしばらくしてから", "空腹のとき", "食事とは関係なさそう", "分からない"]
+  },
+  {
+    id: "appetite_now",
+    category: "appetite",
+    label: "食欲",
+    text: "今、ごはんは食べられていますか？",
+    type: "single",
+    options: ["いつも通り", "少し食べている", "ほとんど食べていない", "まったく食べていない", "分からない"]
+  },
+  {
+    id: "water_change",
+    category: "water",
+    label: "水",
+    text: "水の飲み方に変化はありますか？",
+    type: "single",
+    options: ["いつも通り", "普段より多い", "普段より少ない", "飲んでも吐いてしまう", "分からない"]
+  },
+  {
+    id: "energy_now",
+    category: "energy",
+    label: "元気",
+    text: "いつもと比べて様子はどうですか？",
+    type: "single",
+    options: ["いつも通り", "少し元気がない", "寝ている時間が増えた・隠れている", "明らかに元気がない", "分からない"]
+  },
+  {
+    id: "toilet_change",
+    category: "toilet",
+    label: "うんち・おしっこ",
+    text: "うんちやおしっこに変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "特に変わらない", value: "特に変わらない", exclusive: true },
+      "下痢・軟便",
+      "便が出ていない・少ない",
+      "おしっこの量・回数が増えた",
+      "おしっこの量・回数が減った",
+      "その他",
+      "分からない"
+    ]
+  }
+];
+
 const answers = {};
+let currentVomitQuestionIndex = 0;
+const vomitQuestionKinakoMessage = "いくつか質問するね。分からないものは「分からない」で大丈夫です。";
+const vomitSummaryKinakoMessage = "いっしょに整理できたね🐾 今の様子をまとめてみたよ。\n気になるところがあったら、病院で見せるメモにもできるよ。";
 
 if (symptomCategoryGrid) {
   symptomCategories.forEach((item) => {
@@ -231,11 +314,37 @@ function showView(viewId) {
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.toggle("is-active", view.id === viewId);
   });
+  if (viewId === "vomit-check") {
+    resetVomitCheckPage();
+  }
   const navViewId = ["vomit-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function resetVomitCheckPage() {
+  currentVomitQuestionIndex = 0;
+  setVomitKinakoMessage(vomitQuestionKinakoMessage);
+  document.querySelector("#dangerSignForm").hidden = false;
+  document.querySelector("#dangerResult").hidden = false;
+  document.querySelector("#vomitQuestionFlow").hidden = true;
+  document.querySelector("#vomitSummary").hidden = true;
+  document.querySelector("#dangerSignForm").reset();
+  document.querySelector("#dangerResult").className = "result-card";
+  document.querySelector("#dangerResult").innerHTML = `
+    <span class="result-label">状況確認中</span>
+    <h2>選択して「次へ」を押してください。</h2>
+    <p>分からない場合は、無理に判断せず近くの動物病院へ相談してください。</p>
+  `;
+  vomitFollowupQuestions.forEach((question) => delete answers[question.id]);
+}
+
+function setVomitKinakoMessage(message) {
+  const kinakoMessage = document.querySelector("#vomitKinakoMessage");
+  if (!kinakoMessage) return;
+  kinakoMessage.textContent = message;
 }
 
 function showToast(message) {
@@ -314,15 +423,171 @@ document.querySelector("#dangerSignForm")?.addEventListener("submit", (event) =>
       <h2>チェックをいったんここで止めましょう</h2>
       <p>入力された内容には、緊急性のある状態で見られるサインが含まれています。ねこモヤだけで判断せず、動物病院へ連絡して状況を伝えてください。</p>
     `;
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
 
-  result.classList.add("record");
-  result.innerHTML = `
-    <span class="result-label">今回の試作範囲</span>
-    <h2>ここまでが今回の試作範囲です。</h2>
-    <p>この先の質問フローはまだ準備中です。今後、吐いた回数や時間などを順番に整理できる形へ拡張します。</p>
-  `;
+  startVomitQuestionFlow();
+});
+
+function startVomitQuestionFlow() {
+  currentVomitQuestionIndex = 0;
+  setVomitKinakoMessage(vomitQuestionKinakoMessage);
+  document.querySelector("#dangerResult").hidden = true;
+  document.querySelector("#dangerSignForm").hidden = true;
+  document.querySelector("#vomitSummary").hidden = true;
+  document.querySelector("#vomitQuestionFlow").hidden = false;
+  renderVomitQuestion();
+}
+
+function getOptionData(option) {
+  return typeof option === "string"
+    ? { label: option, value: option, exclusive: false }
+    : { exclusive: false, ...option };
+}
+
+function renderVomitQuestion() {
+  const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+  if (!question) return;
+
+  const title = document.querySelector("#vomitQuestionTitle");
+  const help = document.querySelector("#vomitQuestionHelp");
+  const optionsRoot = document.querySelector("#vomitQuestionOptions");
+  const notice = document.querySelector("#vomitQuestionNotice");
+  const count = document.querySelector("#vomitQuestionCount");
+  const progress = document.querySelector("#vomitQuestionProgress");
+  const back = document.querySelector("#vomitQuestionBack");
+
+  title.textContent = question.text;
+  help.textContent = question.help || "";
+  help.hidden = !question.help;
+  count.textContent = `${currentVomitQuestionIndex + 1} / ${vomitFollowupQuestions.length}`;
+  progress.style.width = `${((currentVomitQuestionIndex + 1) / vomitFollowupQuestions.length) * 100}%`;
+  back.disabled = currentVomitQuestionIndex === 0;
+
+  const inputType = question.type === "multiple" ? "checkbox" : "radio";
+  const selectedValues = answers[question.id]?.values || [];
+  optionsRoot.innerHTML = question.options.map((rawOption) => {
+    const option = getOptionData(rawOption);
+    const checked = selectedValues.includes(option.value) ? " checked" : "";
+    return `
+      <label>
+        <input
+          type="${inputType}"
+          name="${question.id}"
+          value="${escapeHtml(option.value)}"
+          data-exclusive="${option.exclusive ? "true" : "false"}"
+          ${checked}
+        >
+        ${escapeHtml(option.label)}
+      </label>
+    `;
+  }).join("");
+
+  bindExclusiveOptions(optionsRoot);
+  updateQuestionNotice(question, optionsRoot, notice);
+}
+
+function bindExclusiveOptions(optionsRoot) {
+  optionsRoot.onchange = (event) => {
+    const changed = event.target;
+    if (!(changed instanceof HTMLInputElement)) return;
+    const inputs = [...optionsRoot.querySelectorAll("input[type='checkbox']")];
+    const exclusiveInputs = inputs.filter((input) => input.dataset.exclusive === "true");
+
+    if (changed.dataset.exclusive === "true" && changed.checked) {
+      inputs.forEach((input) => {
+        if (input !== changed) input.checked = false;
+      });
+      return;
+    }
+
+    if (changed.checked) {
+      exclusiveInputs.forEach((input) => {
+        input.checked = false;
+      });
+    }
+
+    const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+    updateQuestionNotice(question, optionsRoot, document.querySelector("#vomitQuestionNotice"));
+  };
+}
+
+function updateQuestionNotice(question, optionsRoot, notice) {
+  const selectedLabels = [...optionsRoot.querySelectorAll("input:checked")].map((input) => input.value);
+  const message = selectedLabels.map((label) => question.notices?.[label]).find(Boolean);
+  notice.hidden = !message;
+  notice.textContent = message || "";
+}
+
+function saveCurrentVomitAnswer() {
+  const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+  const selectedInputs = [...document.querySelectorAll(`#vomitQuestionOptions input[name="${question.id}"]:checked`)];
+  const values = selectedInputs.map((input) => input.value);
+
+  if (values.length === 0) {
+    showInlineQuestionNotice("選択してから進んでください。");
+    return false;
+  }
+
+  answers[question.id] = {
+    questionId: question.id,
+    category: question.category,
+    label: question.label,
+    values
+  };
+  return true;
+}
+
+function showInlineQuestionNotice(message) {
+  const notice = document.querySelector("#vomitQuestionNotice");
+  notice.hidden = false;
+  notice.textContent = message;
+}
+
+document.querySelector("#vomitQuestionForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!saveCurrentVomitAnswer()) return;
+
+  if (currentVomitQuestionIndex < vomitFollowupQuestions.length - 1) {
+    currentVomitQuestionIndex += 1;
+    renderVomitQuestion();
+    return;
+  }
+
+  renderVomitSummary();
+});
+
+document.querySelector("#vomitQuestionBack")?.addEventListener("click", () => {
+  saveCurrentVomitAnswer();
+  if (currentVomitQuestionIndex > 0) {
+    currentVomitQuestionIndex -= 1;
+    renderVomitQuestion();
+  }
+});
+
+function renderVomitSummary() {
+  document.querySelector("#vomitQuestionFlow").hidden = true;
+  setVomitKinakoMessage(vomitSummaryKinakoMessage);
+  const summary = document.querySelector("#vomitSummary");
+  const list = document.querySelector("#vomitSummaryList");
+  list.innerHTML = vomitFollowupQuestions.map((question) => {
+    const values = answers[question.id]?.values || ["未選択"];
+    return `
+      <div>
+        <dt>${question.label}</dt>
+        <dd>${values.map(escapeHtml).join("・")}</dd>
+      </div>
+    `;
+  }).join("");
+  summary.hidden = false;
+  summary.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.querySelector("#memoComingSoon")?.addEventListener("click", () => {
+  const status = document.querySelector("#memoComingSoonStatus");
+  status.hidden = false;
+  status.textContent = "病院メモ機能は準備中です。次回実装予定です。";
 });
 
 document.querySelector("#triageForm").addEventListener("submit", (event) => {

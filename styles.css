@@ -18,6 +18,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -256,6 +260,7 @@ p {
 .wide-guide-card,
 .kinako-cta-card,
 .accordion-card,
+.summary-card,
 .form-card,
 .result-card,
 .chat-panel,
@@ -437,6 +442,10 @@ p {
   align-items: center;
 }
 
+#vomitKinakoMessage {
+  white-space: pre-line;
+}
+
 .accordion-list {
   display: grid;
   gap: 10px;
@@ -456,7 +465,10 @@ p {
   cursor: pointer;
 }
 
-.accordion-card p,
+.accordion-card p {
+  padding: 0 16px 16px;
+}
+
 .accordion-card .plain-list {
   padding: 0 16px 16px 2rem;
   list-style-position: outside;
@@ -494,6 +506,108 @@ p {
 .check-list {
   display: grid;
   gap: 10px;
+}
+
+.question-flow {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.question-progress {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.question-progress small {
+  justify-self: end;
+}
+
+.question-progress-bar {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.question-progress-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--mint);
+  transition: width 0.2s ease;
+}
+
+.question-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.question-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.soft-warning {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: #fff9eb;
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.summary-card {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 18px;
+  background: #fff9f4;
+}
+
+.summary-card h2,
+.summary-card h3 {
+  margin-bottom: 6px;
+}
+
+.summary-card .plain-list {
+  padding-left: 1.4rem;
+}
+
+.summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.summary-list div {
+  border-bottom: 1px dashed var(--line);
+  padding: 8px 0;
+}
+
+.summary-list dt {
+  color: var(--brown);
+  font-weight: 700;
+}
+
+.summary-list dd {
+  margin: 2px 0 0;
+}
+
+.summary-note {
+  margin-top: 0;
+}
+
+.coming-soon-note {
+  border-radius: 8px;
+  background: #fffdf6;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 0.9rem;
 }
 
 .toast {
@@ -647,6 +761,27 @@ textarea {
   resize: vertical;
 }
 
+.check-list label {
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.check-list input[type="radio"],
+.check-list input[type="checkbox"] {
+  justify-self: start;
+  width: auto;
+  margin: 0;
+}
+
+.check-list label:has(input[type="checkbox"]) {
+  align-items: center;
+  min-height: 44px;
+}
+
 .result-card,
 .memo-output {
   margin-top: 16px;
@@ -667,6 +802,27 @@ textarea {
 .result-card.urgent {
   border-color: rgba(220, 38, 38, 0.45);
   background: #fff6f4;
+}
+
+#dangerResult.urgent {
+  scroll-margin-top: 18px;
+  border-color: rgba(184, 74, 74, 0.42);
+  background: #fff3f1;
+}
+
+#dangerResult.urgent h2 {
+  color: #b84a4a;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+#dangerResult.urgent h2::before {
+  content: "⚠️ ";
+}
+
+#dangerResult.urgent p {
+  color: var(--text);
+  font-weight: 500;
 }
 
 .result-card.soon {

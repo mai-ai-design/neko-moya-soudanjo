@@ -126,7 +126,6 @@
               呼吸が苦しそう、意識がおかしい、けいれん、尿が出ないなど緊急性が疑われる場合は、
               症状を探し続けるより動物病院への連絡・相談を検討してください。
             </p>
-            <button class="secondary-btn nav-link" type="button" data-view="check">受診目安をチェックする</button>
           </div>
 
           <div id="symptomCategoryGrid" class="symptom-category-grid" aria-label="症状カテゴリ"></div>
@@ -161,8 +160,12 @@
             <h2 id="vomit-accordion-title">猫が吐いたときに知っておきたいこと</h2>
             <div class="accordion-list">
               <details class="accordion-card">
-                <summary>よくあるケースについて</summary>
-                <p>内容確認中です。文章が確定し次第、ここに掲載します。</p>
+                <summary>吐く原因はいろいろ</summary>
+                <p>猫は毛づくろいで飲み込んだ毛などを吐くことがあります。<br>
+                一方で、吐く理由はひとつではありません。</p>
+                <p>「毛玉かな？」「食べすぎかな？」と決めつけず、<br>
+                吐いた回数や吐いたもの、その後の食欲・元気・水の飲み方なども<br>
+                一緒に見ておきましょう。</p>
               </details>
               <details class="accordion-card">
                 <summary>観察してほしいポイント</summary>
@@ -180,7 +183,22 @@
               </details>
               <details class="accordion-card">
                 <summary>病院へ相談したいサイン</summary>
-                <p>内容確認中です。文章が確定し次第、ここに掲載します。</p>
+                <p>次のような変化がある場合は、緊急チェックに当てはまらなくても、<br>
+                動物病院へ相談することを検討してください。</p>
+                <ul class="plain-list">
+                  <li>吐くことを繰り返している</li>
+                  <li>吐く状態が続いている</li>
+                  <li>食欲が落ちている、または食べない</li>
+                  <li>普段より元気がない・隠れている</li>
+                  <li>水を飲めない、または飲んでも吐く</li>
+                  <li>下痢など別の症状も出ている</li>
+                  <li>吐いたものに血が混じっている</li>
+                  <li>体重が減ってきた</li>
+                  <li>飲水量や尿の量・回数にも変化がある</li>
+                  <li>飼い主さんから見て「いつもと明らかに違う」</li>
+                </ul>
+                <p>迷ったときは、回数や吐いたものだけで判断せず、<br>
+                猫ちゃん全体の様子も含めて動物病院へ相談してください。</p>
               </details>
               <details class="accordion-card">
                 <summary>記録しておくとよいこと</summary>
@@ -213,7 +231,7 @@
 
           <div class="kinako-cta-card">
             <img class="kinako-avatar" src="assets/kinako.png" alt="きなこ">
-            <p>いくつか質問するね。分からないものは「分からない」で大丈夫です。</p>
+            <p id="vomitKinakoMessage">いくつか質問するね。分からないものは「分からない」で大丈夫です。</p>
           </div>
 
           <div class="progress-dots" aria-label="状況確認中">
@@ -235,6 +253,55 @@
             <span class="result-label">状況確認中</span>
             <h2>選択して「次へ」を押してください。</h2>
             <p>分からない場合は、無理に判断せず近くの動物病院へ相談してください。</p>
+          </div>
+
+          <div id="vomitQuestionFlow" class="question-flow" hidden>
+            <div class="question-progress" aria-label="状況確認中">
+              <span>状況確認中</span>
+              <small id="vomitQuestionCount">1 / 8</small>
+              <div class="question-progress-bar">
+                <span id="vomitQuestionProgress"></span>
+              </div>
+            </div>
+
+            <form id="vomitQuestionForm" class="form-card">
+              <fieldset>
+                <legend id="vomitQuestionTitle"></legend>
+                <p id="vomitQuestionHelp" class="question-text"></p>
+                <div id="vomitQuestionOptions" class="check-list"></div>
+                <div id="vomitQuestionNotice" class="soft-warning" hidden></div>
+              </fieldset>
+              <div class="question-actions">
+                <button class="ghost-btn" id="vomitQuestionBack" type="button">戻る</button>
+                <button class="primary-btn" type="submit">次へ</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="vomitSummary" class="summary-card" hidden>
+            <h2>🐾 きなこと一緒に整理しました</h2>
+            <section aria-labelledby="vomit-summary-title">
+              <h3 id="vomit-summary-title">今回の様子</h3>
+              <dl id="vomitSummaryList" class="summary-list"></dl>
+            </section>
+            <section aria-labelledby="vomit-photo-title">
+              <h3 id="vomit-photo-title">📷 病院へ行く前に残せそうなら</h3>
+              <ul class="plain-list">
+                <li>吐いたものの写真</li>
+                <li>吐いている様子の動画</li>
+                <li>吐いた時刻</li>
+                <li>食べたもののパッケージ</li>
+                <li>誤食の可能性があれば、その物や包装</li>
+              </ul>
+            </section>
+            <div class="notice-card summary-note">
+              <p>
+                この内容だけで病気や受診の必要性を診断するものではありません。
+                症状が続く・悪化する・普段と明らかに違う、または飼い主さんが不安を感じる場合は、動物病院へ相談してください。
+              </p>
+            </div>
+            <button class="secondary-btn" id="memoComingSoon" type="button">📋 病院メモを作る</button>
+            <p id="memoComingSoonStatus" class="coming-soon-note" hidden>病院メモ機能は準備中です。次回実装予定です。</p>
           </div>
         </section>
 
