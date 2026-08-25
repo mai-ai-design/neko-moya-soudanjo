@@ -218,7 +218,98 @@
             <div>
               <h2>もう少し詳しく整理してみる？</h2>
               <p>このサービスは診断を行うものではありません。分かる範囲で、今の状況を一緒に整理します。</p>
-              <button class="primary-btn nav-link" type="button" data-view="vomit-check">🐾 いっしょに状況を整理する</button>
+              <button class="primary-btn nav-link" type="button" data-flow="vomit" data-view="vomit-check">🐾 いっしょに状況を整理する</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="appetite-detail" class="view" aria-labelledby="appetite-detail-title">
+          <div class="page-heading">
+            <p class="eyebrow">症状から探す</p>
+            <h1 id="appetite-detail-title">🍚 猫が食べない・食欲がおかしい</h1>
+            <p>猫の食欲の変化には、さまざまな背景があります。<br>
+            食べないだけでなく、「食べる量が減った」<br>
+            「食べたそうなのに食べられない」など、<br>
+            どんな変化があるかを観察することも大切です。</p>
+            <p>ねこモヤでは原因を判断するのではなく、<br>
+            今の様子を一緒に整理していきます。</p>
+          </div>
+
+          <div class="notice-card symptom-alert">
+            <strong>🚨 まず確認してください</strong>
+            <p>
+              呼吸が明らかに苦しそう／意識・反応がおかしい／けいれん／倒れている／強く痛がっている／
+              異物・薬・毒物などを口にした可能性がある場合は、動物病院への連絡・相談を検討してください。
+            </p>
+            <p>
+              猫は食べない状態が続くこと自体が体への負担になることがあります。
+              食べない・食べる量が大きく減った状態が続いている場合は、
+              様子だけで判断せず動物病院へ相談してください。
+            </p>
+          </div>
+
+          <section class="section-block" aria-labelledby="appetite-accordion-title">
+            <h2 id="appetite-accordion-title">猫が食べないときに知っておきたいこと</h2>
+            <div class="accordion-list">
+              <details class="accordion-card">
+                <summary>食欲の変化にはいろいろあります</summary>
+                <p>猫が食べない理由はひとつではありません。<br>
+                体調の変化だけでなく、口の痛み、吐き気、ストレス、<br>
+                環境やフードの変化などが関係することもあります。</p>
+                <p>また、「食べること自体に興味がない」のか、<br>
+                「食べたそうにするけれど食べられない」のかも、<br>
+                様子を整理するポイントになります。</p>
+              </details>
+              <details class="accordion-card">
+                <summary>観察してほしいポイント</summary>
+                <ul class="plain-list">
+                  <li>いつ頃から食欲が変わったか</li>
+                  <li>まったく食べないのか、量が減っているのか</li>
+                  <li>食べようとはするか</li>
+                  <li>口を気にする様子がないか</li>
+                  <li>水は飲めているか</li>
+                  <li>吐く・下痢など他の変化</li>
+                  <li>元気や普段の行動</li>
+                  <li>最近フードを変更したか</li>
+                  <li>引っ越し、来客、新しい動物など環境の変化</li>
+                  <li>最近の体重変化</li>
+                </ul>
+              </details>
+              <details class="accordion-card">
+                <summary>病院へ相談したいサイン</summary>
+                <p>食べない状態が続いている、食べる量が大きく減っている、<br>
+                元気がない、吐く・下痢などほかの変化もある、<br>
+                食べたそうなのに食べられないなどの場合は、<br>
+                動物病院への相談を検討しましょう。</p>
+                <p>猫は、食べない状態が続くこと自体が体への負担に<br>
+                なることがあります。<br>
+                「もう少し様子を見ても大丈夫」とねこモヤだけで判断せず、<br>
+                気になる状態が続く場合は獣医師へ相談してください。</p>
+              </details>
+              <details class="accordion-card">
+                <summary>記録しておくとよいこと</summary>
+                <ul class="plain-list">
+                  <li>最後に普段通り食べた日時</li>
+                  <li>食べた量</li>
+                  <li>食べたフードの種類</li>
+                  <li>食べようとしたか</li>
+                  <li>水の飲み方</li>
+                  <li>吐いた、下痢など他の変化</li>
+                  <li>元気、行動の変化</li>
+                  <li>最近の体重</li>
+                  <li>フードを変更した場合は商品名やパッケージ</li>
+                  <li>食べ方がおかしい場合は動画</li>
+                </ul>
+              </details>
+            </div>
+          </section>
+
+          <div class="kinako-cta-card">
+            <img class="kinako-avatar" src="assets/kinako.png" alt="きなこ">
+            <div>
+              <h2>もう少し詳しく整理してみる？</h2>
+              <p>このサービスは診断を行うものではありません。分かる範囲で、今の状況を一緒に整理します。</p>
+              <button class="primary-btn nav-link" type="button" data-flow="appetite" data-view="vomit-check">🐾 いっしょに状況を整理する</button>
             </div>
           </div>
         </section>
@@ -286,7 +377,7 @@
             </section>
             <section aria-labelledby="vomit-photo-title">
               <h3 id="vomit-photo-title">📷 病院へ行く前に残せそうなら</h3>
-              <ul class="plain-list">
+              <ul id="summaryPhotoList" class="plain-list">
                 <li>吐いたものの写真</li>
                 <li>吐いている様子の動画</li>
                 <li>吐いた時刻</li>

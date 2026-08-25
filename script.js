@@ -150,7 +150,7 @@ const lifeGrid = document.querySelector("#lifeGrid");
 
 const symptomCategories = [
   { icon: "🤮", title: "吐いた・吐きそう", view: "vomit-detail", ready: true },
-  { icon: "🍚", title: "食べない・食欲がおかしい" },
+  { icon: "🍚", title: "食べない・食欲がおかしい", view: "appetite-detail", ready: true },
   { icon: "💩", title: "うんちがおかしい" },
   { icon: "🚽", title: "おしっこがおかしい" },
   { icon: "💧", title: "水の飲み方がおかしい" },
@@ -263,10 +263,149 @@ const vomitFollowupQuestions = [
   }
 ];
 
+const appetiteFollowupQuestions = [
+  {
+    id: "appetite_started_at",
+    category: "appetiteTiming",
+    label: "食欲の変化",
+    text: "食欲がいつもと違うと感じたのは、いつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "それより前", "分からない"]
+  },
+  {
+    id: "appetite_eating_style",
+    category: "eatingStyle",
+    label: "食べ方",
+    text: "今の食べ方に近いものを選んでください。",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "まったく食べない",
+      "食べる量がかなり減った",
+      "少しは食べている",
+      "食べたそうにするけれど食べられない",
+      "好きなものだけなら食べる",
+      "食べたり食べなかったりする",
+      "その他",
+      "分からない"
+    ],
+    notices: {
+      "まったく食べない": "⚠️ 猫は食べない状態が続くこと自体が体への負担になることがあります。いつから食べていないかを確認し、動物病院への相談も検討してください。"
+    }
+  },
+  {
+    id: "appetite_amount",
+    category: "eatingAmount",
+    label: "食べた量",
+    text: "普段と比べて、どのくらい食べていますか？",
+    type: "single",
+    options: ["ほとんど食べていない", "普段の1〜3割くらい", "半分くらい", "半分以上は食べている", "量はあまり変わらない", "分からない"]
+  },
+  {
+    id: "appetite_water_change",
+    category: "water",
+    label: "水",
+    text: "水の飲み方に変化はありますか？",
+    type: "single",
+    options: ["いつも通り", "普段より多い", "普段より少ない", "ほとんど飲んでいないように見える", "分からない"]
+  },
+  {
+    id: "appetite_eating_behavior",
+    category: "eatingBehavior",
+    label: "食べようとするときの様子",
+    text: "食べようとするとき、こんな様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "食べ物のところまでは来るけれど食べない",
+      "匂いを嗅いで離れる",
+      "口や顔まわりを気にする",
+      "よだれが増えた",
+      "食べ物を口から落とす",
+      "飲み込みにくそう",
+      { label: "特に気になる様子はない", value: "特に気になる様子はない", exclusive: true },
+      "分からない"
+    ],
+    notices: {
+      "口や顔まわりを気にする": "気になる食べ方が続いている場合は、その様子を動画に残して動物病院で見せると、状況を伝えやすくなります。",
+      "よだれが増えた": "気になる食べ方が続いている場合は、その様子を動画に残して動物病院で見せると、状況を伝えやすくなります。",
+      "食べ物を口から落とす": "気になる食べ方が続いている場合は、その様子を動画に残して動物病院で見せると、状況を伝えやすくなります。",
+      "飲み込みにくそう": "気になる食べ方が続いている場合は、その様子を動画に残して動物病院で見せると、状況を伝えやすくなります。"
+    }
+  },
+  {
+    id: "appetite_energy_now",
+    category: "energy",
+    label: "元気",
+    text: "いつもと比べて様子はどうですか？",
+    type: "single",
+    options: ["いつも通り", "少し元気がない", "寝ている時間が増えた／隠れている", "明らかに元気がない", "分からない"]
+  },
+  {
+    id: "appetite_other_changes",
+    category: "otherChanges",
+    label: "その他の変化",
+    text: "ほかに気になる変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "吐いた・吐きそう",
+      "下痢・軟便",
+      "便が出ていない／少ない",
+      "おしっこの様子がいつもと違う",
+      "体重が減ったように感じる",
+      "鼻水・鼻づまり・くしゃみ",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "appetite_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近、食事や暮らしで変わったことはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "フードを変えた",
+      "おやつや食べ物が変わった",
+      "引っ越し・模様替えなど環境が変わった",
+      "新しい家族や動物が増えた",
+      "留守番など生活リズムが変わった",
+      "薬を飲み始めた／変更した",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "その他",
+      "分からない"
+    ]
+  }
+];
+
 const answers = {};
 let currentVomitQuestionIndex = 0;
+let currentFlowKey = "vomit";
 const vomitQuestionKinakoMessage = "いくつか質問するね。分からないものは「分からない」で大丈夫です。";
 const vomitSummaryKinakoMessage = "いっしょに整理できたね🐾 今の様子をまとめてみたよ。\n気になるところがあったら、病院で見せるメモにもできるよ。";
+const appetiteSummaryKinakoMessage = "いっしょに整理できたね🐾\n今の様子をまとめてみたよ。\n気になるところがあったら、\n病院で見せるメモにもできるよ。";
+const symptomFlowConfigs = {
+  vomit: {
+    questions: vomitFollowupQuestions,
+    summaryMessage: vomitSummaryKinakoMessage,
+    photoItems: ["吐いたものの写真", "吐いている様子の動画", "吐いた時刻", "食べたもののパッケージ", "誤食の可能性があれば、その物や包装"]
+  },
+  appetite: {
+    questions: appetiteFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "食べた量や残した量が分かる写真",
+      "食べようとするときの様子の動画",
+      "最後に普段通り食べた日時",
+      "食べたフードの商品名／パッケージ",
+      "最近の体重が分かればその記録",
+      "吐いた、下痢などがある場合はその記録"
+    ]
+  }
+};
 
 if (symptomCategoryGrid) {
   symptomCategories.forEach((item) => {
@@ -307,7 +446,12 @@ lifeConcerns.forEach(([title, cause, action, goods, caution]) => {
 });
 
 document.querySelectorAll(".nav-link").forEach((button) => {
-  button.addEventListener("click", () => showView(button.dataset.view));
+  button.addEventListener("click", () => {
+    if (button.dataset.flow) {
+      currentFlowKey = button.dataset.flow;
+    }
+    showView(button.dataset.view);
+  });
 });
 
 function showView(viewId) {
@@ -317,7 +461,7 @@ function showView(viewId) {
   if (viewId === "vomit-check") {
     resetVomitCheckPage();
   }
-  const navViewId = ["vomit-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
+  const navViewId = ["vomit-detail", "appetite-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -338,7 +482,15 @@ function resetVomitCheckPage() {
     <h2>選択して「次へ」を押してください。</h2>
     <p>分からない場合は、無理に判断せず近くの動物病院へ相談してください。</p>
   `;
-  vomitFollowupQuestions.forEach((question) => delete answers[question.id]);
+  getCurrentQuestions().forEach((question) => delete answers[question.id]);
+}
+
+function getCurrentFlowConfig() {
+  return symptomFlowConfigs[currentFlowKey] || symptomFlowConfigs.vomit;
+}
+
+function getCurrentQuestions() {
+  return getCurrentFlowConfig().questions;
 }
 
 function setVomitKinakoMessage(message) {
@@ -447,7 +599,8 @@ function getOptionData(option) {
 }
 
 function renderVomitQuestion() {
-  const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+  const questions = getCurrentQuestions();
+  const question = questions[currentVomitQuestionIndex];
   if (!question) return;
 
   const title = document.querySelector("#vomitQuestionTitle");
@@ -461,8 +614,8 @@ function renderVomitQuestion() {
   title.textContent = question.text;
   help.textContent = question.help || "";
   help.hidden = !question.help;
-  count.textContent = `${currentVomitQuestionIndex + 1} / ${vomitFollowupQuestions.length}`;
-  progress.style.width = `${((currentVomitQuestionIndex + 1) / vomitFollowupQuestions.length) * 100}%`;
+  count.textContent = `${currentVomitQuestionIndex + 1} / ${questions.length}`;
+  progress.style.width = `${((currentVomitQuestionIndex + 1) / questions.length) * 100}%`;
   back.disabled = currentVomitQuestionIndex === 0;
 
   const inputType = question.type === "multiple" ? "checkbox" : "radio";
@@ -508,7 +661,7 @@ function bindExclusiveOptions(optionsRoot) {
       });
     }
 
-    const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+    const question = getCurrentQuestions()[currentVomitQuestionIndex];
     updateQuestionNotice(question, optionsRoot, document.querySelector("#vomitQuestionNotice"));
   };
 }
@@ -521,7 +674,7 @@ function updateQuestionNotice(question, optionsRoot, notice) {
 }
 
 function saveCurrentVomitAnswer() {
-  const question = vomitFollowupQuestions[currentVomitQuestionIndex];
+  const question = getCurrentQuestions()[currentVomitQuestionIndex];
   const selectedInputs = [...document.querySelectorAll(`#vomitQuestionOptions input[name="${question.id}"]:checked`)];
   const values = selectedInputs.map((input) => input.value);
 
@@ -549,7 +702,7 @@ document.querySelector("#vomitQuestionForm")?.addEventListener("submit", (event)
   event.preventDefault();
   if (!saveCurrentVomitAnswer()) return;
 
-  if (currentVomitQuestionIndex < vomitFollowupQuestions.length - 1) {
+  if (currentVomitQuestionIndex < getCurrentQuestions().length - 1) {
     currentVomitQuestionIndex += 1;
     renderVomitQuestion();
     return;
@@ -568,10 +721,12 @@ document.querySelector("#vomitQuestionBack")?.addEventListener("click", () => {
 
 function renderVomitSummary() {
   document.querySelector("#vomitQuestionFlow").hidden = true;
-  setVomitKinakoMessage(vomitSummaryKinakoMessage);
+  const flowConfig = getCurrentFlowConfig();
+  setVomitKinakoMessage(flowConfig.summaryMessage);
   const summary = document.querySelector("#vomitSummary");
   const list = document.querySelector("#vomitSummaryList");
-  list.innerHTML = vomitFollowupQuestions.map((question) => {
+  const photoList = document.querySelector("#summaryPhotoList");
+  list.innerHTML = flowConfig.questions.map((question) => {
     const values = answers[question.id]?.values || ["未選択"];
     return `
       <div>
@@ -580,6 +735,9 @@ function renderVomitSummary() {
       </div>
     `;
   }).join("");
+  if (photoList) {
+    photoList.innerHTML = flowConfig.photoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  }
   summary.hidden = false;
   summary.scrollIntoView({ behavior: "smooth", block: "start" });
 }
