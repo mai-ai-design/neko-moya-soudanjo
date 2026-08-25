@@ -145,28 +145,66 @@ const memoFields = [
   ["question", "獣医さんに聞きたいこと", "textarea", "wide"]
 ];
 
-const symptomGrid = document.querySelector("#symptomGrid");
+const symptomCategoryGrid = document.querySelector("#symptomCategoryGrid");
 const lifeGrid = document.querySelector("#lifeGrid");
 
-function createInfoCard(item) {
-  const article = document.createElement("article");
-  article.className = "info-card";
-  article.innerHTML = `
-    <header>
-      <h2>${item.title}</h2>
-      <span class="cat-icon" aria-hidden="true">ฅ</span>
-    </header>
-    <dl class="info-list">
-      <div><dt>よくある原因</dt><dd>${item.cause}</dd></div>
-      <div><dt>見ておきたいポイント</dt><dd>${item.points}</dd></div>
-      <div><dt>病院に相談した方がよいサイン</dt><dd>${item.sign}</dd></div>
-      <div><dt>記録しておくとよいこと</dt><dd>${item.record}</dd></div>
-    </dl>
-  `;
-  return article;
-}
+const symptomCategories = [
+  { icon: "🤮", title: "吐いた・吐きそう", view: "vomit-detail", ready: true },
+  { icon: "🍚", title: "食べない・食欲がおかしい" },
+  { icon: "💩", title: "うんちがおかしい" },
+  { icon: "🚽", title: "おしっこがおかしい" },
+  { icon: "💧", title: "水の飲み方がおかしい" },
+  { icon: "😿", title: "元気・様子がおかしい" },
+  { icon: "💨", title: "呼吸・咳・くしゃみ" },
+  { icon: "👁️", title: "目がおかしい" },
+  { icon: "👂", title: "耳がおかしい" },
+  { icon: "👄", title: "口・歯がおかしい" },
+  { icon: "🩹", title: "皮膚・毛がおかしい" },
+  { icon: "🐾", title: "歩き方・動きがおかしい" },
+  { icon: "⚖️", title: "体重・体型が変わった" },
+  { icon: "⚠️", title: "けいれん・意識・急な異変" }
+];
 
-symptoms.forEach((item) => symptomGrid.append(createInfoCard(item)));
+const dangerQuestions = [
+  {
+    id: "danger_signs_first_check",
+    category: "dangerSigns",
+    text: "今、次のような様子はありますか？",
+    multiple: true,
+    options: [
+      { label: "呼吸が明らかに苦しそう", value: "breathing" },
+      { label: "意識・反応がおかしい", value: "consciousness" },
+      { label: "けいれんしている", value: "seizure" },
+      { label: "倒れている", value: "collapsed" },
+      { label: "強く痛がっている", value: "strongPain" },
+      { label: "異物・薬・毒物などを食べた可能性がある", value: "ingestion" },
+      { label: "どれも当てはまらない", value: "none", exclusive: true }
+    ]
+  }
+];
+
+const answers = {};
+
+if (symptomCategoryGrid) {
+  symptomCategories.forEach((item) => {
+    const button = document.createElement("button");
+    button.className = `symptom-category-card${item.ready ? "" : " is-disabled"}`;
+    button.type = "button";
+    button.innerHTML = `
+      <span class="symptom-emoji" aria-hidden="true">${item.icon}</span>
+      <span>${item.title}</span>
+      ${item.ready ? "" : '<small>準備中</small>'}
+    `;
+    button.addEventListener("click", () => {
+      if (item.ready) {
+        showView(item.view);
+        return;
+      }
+      showToast("この症状ページは準備中です。");
+    });
+    symptomCategoryGrid.append(button);
+  });
+}
 
 lifeConcerns.forEach(([title, cause, action, goods, caution]) => {
   lifeGrid.insertAdjacentHTML("beforeend", `
@@ -193,11 +231,99 @@ function showView(viewId) {
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.toggle("is-active", view.id === viewId);
   });
+  const navViewId = ["vomit-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
-    button.classList.toggle("is-current", button.dataset.view === viewId);
+    button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
+function showToast(message) {
+  const toast = document.querySelector("#toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+  window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+}
+
+function renderDangerQuestion() {
+  const optionsRoot = document.querySelector("#dangerOptions");
+  if (!optionsRoot) return;
+  const question = dangerQuestions[0];
+  optionsRoot.innerHTML = question.options.map((option) => `
+    <label>
+      <input
+        type="checkbox"
+        name="${question.id}"
+        value="${option.value}"
+        data-exclusive="${option.exclusive ? "true" : "false"}"
+      >
+      ${option.label}
+    </label>
+  `).join("");
+
+  optionsRoot.addEventListener("change", (event) => {
+    const changed = event.target;
+    if (!(changed instanceof HTMLInputElement)) return;
+    const inputs = [...optionsRoot.querySelectorAll("input[type='checkbox']")];
+    const noneInput = inputs.find((input) => input.dataset.exclusive === "true");
+
+    if (changed.dataset.exclusive === "true" && changed.checked) {
+      inputs.forEach((input) => {
+        if (input !== changed) input.checked = false;
+      });
+      return;
+    }
+
+    if (changed.checked && noneInput) {
+      noneInput.checked = false;
+    }
+  });
+}
+
+renderDangerQuestion();
+
+document.querySelector("#dangerSignForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const question = dangerQuestions[0];
+  const selected = [...form.querySelectorAll(`input[name="${question.id}"]:checked`)].map((input) => input.value);
+  answers[question.id] = {
+    questionId: question.id,
+    category: question.category,
+    values: selected
+  };
+
+  const result = document.querySelector("#dangerResult");
+  if (!result) return;
+  result.className = "result-card";
+
+  if (selected.length === 0) {
+    result.innerHTML = `
+      <span class="result-label">未選択です</span>
+      <h2>当てはまるものを選んでください。</h2>
+      <p>分からない場合は「どれも当てはまらない」を選んでください。</p>
+    `;
+    return;
+  }
+
+  if (selected.some((value) => value !== "none")) {
+    result.classList.add("urgent");
+    result.innerHTML = `
+      <span class="result-label">確認を止める目安</span>
+      <h2>チェックをいったんここで止めましょう</h2>
+      <p>入力された内容には、緊急性のある状態で見られるサインが含まれています。ねこモヤだけで判断せず、動物病院へ連絡して状況を伝えてください。</p>
+    `;
+    return;
+  }
+
+  result.classList.add("record");
+  result.innerHTML = `
+    <span class="result-label">今回の試作範囲</span>
+    <h2>ここまでが今回の試作範囲です。</h2>
+    <p>この先の質問フローはまだ準備中です。今後、吐いた回数や時間などを順番に整理できる形へ拡張します。</p>
+  `;
+});
 
 document.querySelector("#triageForm").addEventListener("submit", (event) => {
   event.preventDefault();

@@ -117,9 +117,125 @@
           <div class="page-heading">
             <p class="eyebrow">症状から探す</p>
             <h1 id="symptoms-title">気になる様子を選んでください</h1>
-            <p>よくある原因、見ておきたいポイント、相談サインをまとめました。</p>
+            <p>「いつもと違うかも？」と思ったところから選んでね。</p>
           </div>
-          <div id="symptomGrid" class="card-grid"></div>
+
+          <div class="notice-card symptom-alert">
+            <strong>🚨 明らかに様子がおかしいとき</strong>
+            <p>
+              呼吸が苦しそう、意識がおかしい、けいれん、尿が出ないなど緊急性が疑われる場合は、
+              症状を探し続けるより動物病院への連絡・相談を検討してください。
+            </p>
+            <button class="secondary-btn nav-link" type="button" data-view="check">受診目安をチェックする</button>
+          </div>
+
+          <div id="symptomCategoryGrid" class="symptom-category-grid" aria-label="症状カテゴリ"></div>
+
+          <div class="wide-guide-card">
+            <div>
+              <h2>🔍 どれに当てはまるかわからない</h2>
+              <p>「吐いたのか咳なのかわからない」「なんとなくいつもと違う」と感じるときは、言葉にしながら整理してみましょう。</p>
+            </div>
+            <button class="ghost-btn nav-link" type="button" data-view="chat">AIに相談して整理する</button>
+          </div>
+          <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        </section>
+
+        <section id="vomit-detail" class="view" aria-labelledby="vomit-detail-title">
+          <div class="page-heading">
+            <p class="eyebrow">症状から探す</p>
+            <h1 id="vomit-detail-title">🤮 猫が吐いた</h1>
+            <p>猫は毛玉などで吐くこともありますが、吐き方・回数・一緒に現れている症状などによって注意が必要な場合があります。</p>
+          </div>
+
+          <div class="notice-card symptom-alert">
+            <strong>🚨 まず確認してください</strong>
+            <p>
+              呼吸が明らかに苦しそう／意識・反応がおかしい／けいれん／倒れている／強く痛がっている／激しく、または繰り返し吐き続けている／
+              吐こうとしているのに何も出ない状態が続く／お腹が明らかに張っている、強く痛がる／多量の出血／異物・薬・毒物などを口にした可能性がある場合は、
+              動物病院への連絡・相談を検討してください。
+            </p>
+          </div>
+
+          <section class="section-block" aria-labelledby="vomit-accordion-title">
+            <h2 id="vomit-accordion-title">猫が吐いたときに知っておきたいこと</h2>
+            <div class="accordion-list">
+              <details class="accordion-card">
+                <summary>よくあるケースについて</summary>
+                <p>内容確認中です。文章が確定し次第、ここに掲載します。</p>
+              </details>
+              <details class="accordion-card">
+                <summary>観察してほしいポイント</summary>
+                <ul class="plain-list">
+                  <li>吐いた回数</li>
+                  <li>吐いたもの</li>
+                  <li>吐いた時間</li>
+                  <li>食事との時間関係</li>
+                  <li>水が飲めているか</li>
+                  <li>食欲</li>
+                  <li>元気</li>
+                  <li>便</li>
+                  <li>異物・毒物を口にした可能性</li>
+                </ul>
+              </details>
+              <details class="accordion-card">
+                <summary>病院へ相談したいサイン</summary>
+                <p>内容確認中です。文章が確定し次第、ここに掲載します。</p>
+              </details>
+              <details class="accordion-card">
+                <summary>記録しておくとよいこと</summary>
+                <ul class="plain-list">
+                  <li>吐いたものの写真</li>
+                  <li>吐いている様子の動画</li>
+                  <li>吐いた回数と時間</li>
+                  <li>食事との時間関係</li>
+                  <li>誤食の可能性がある場合の商品包装など</li>
+                </ul>
+              </details>
+            </div>
+          </section>
+
+          <div class="kinako-cta-card">
+            <img class="kinako-avatar" src="assets/kinako.png" alt="きなこ">
+            <div>
+              <h2>もう少し詳しく整理してみる？</h2>
+              <p>このサービスは診断を行うものではありません。分かる範囲で、今の状況を一緒に整理します。</p>
+              <button class="primary-btn nav-link" type="button" data-view="vomit-check">🐾 いっしょに状況を整理する</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="vomit-check" class="view" aria-labelledby="vomit-check-title">
+          <div class="page-heading">
+            <p class="eyebrow">状況確認中</p>
+            <h1 id="vomit-check-title">状況を整理する</h1>
+          </div>
+
+          <div class="kinako-cta-card">
+            <img class="kinako-avatar" src="assets/kinako.png" alt="きなこ">
+            <p>いくつか質問するね。分からないものは「分からない」で大丈夫です。</p>
+          </div>
+
+          <div class="progress-dots" aria-label="状況確認中">
+            <span class="is-active"></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <form id="dangerSignForm" class="form-card">
+            <fieldset>
+              <legend>🚨 まず最初に確認します</legend>
+              <p class="question-text">今、次のような様子はありますか？</p>
+              <div id="dangerOptions" class="check-list"></div>
+            </fieldset>
+            <button class="primary-btn" type="submit">次へ</button>
+          </form>
+
+          <div id="dangerResult" class="result-card" aria-live="polite">
+            <span class="result-label">状況確認中</span>
+            <h2>選択して「次へ」を押してください。</h2>
+            <p>分からない場合は、無理に判断せず近くの動物病院へ相談してください。</p>
+          </div>
         </section>
 
         <section id="check" class="view" aria-labelledby="check-title">
