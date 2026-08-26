@@ -151,8 +151,8 @@ const lifeGrid = document.querySelector("#lifeGrid");
 const symptomCategories = [
   { icon: "🤮", title: "吐いた・吐きそう", view: "vomit-detail", ready: true },
   { icon: "🍚", title: "食べない・食欲がおかしい", view: "appetite-detail", ready: true },
-  { icon: "💩", title: "うんちがおかしい" },
-  { icon: "🚽", title: "おしっこがおかしい" },
+  { icon: "💩", title: "うんちがおかしい", view: "poop-detail", ready: true },
+  { icon: "🚽", title: "おしっこがおかしい", view: "urine-detail", ready: true },
   { icon: "💧", title: "水の飲み方がおかしい" },
   { icon: "😿", title: "元気・様子がおかしい" },
   { icon: "💨", title: "呼吸・咳・くしゃみ" },
@@ -381,6 +381,250 @@ const appetiteFollowupQuestions = [
   }
 ];
 
+const poopFollowupQuestions = [
+  {
+    id: "poop_started_at",
+    category: "poopTiming",
+    label: "うんちの変化",
+    text: "うんちの変化が気になったのは、いつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "それより前", "分からない"]
+  },
+  {
+    id: "poop_state",
+    category: "poopState",
+    label: "便の状態",
+    text: "うんちの状態にいちばん近いものを選んでください。",
+    type: "single",
+    options: ["やわらかい", "水っぽい", "硬い・コロコロ", "便が出ていない", "少しずつしか出ない", "いつもと形が違う", "よく分からない"]
+  },
+  {
+    id: "poop_color_mixture",
+    category: "poopColorMixture",
+    label: "色・混じっているもの",
+    text: "色や混じっているものに気になる点はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもと同じような色", value: "いつもと同じような色", exclusive: true },
+      "赤い血のようなもの",
+      "黒っぽい・タール状に見える",
+      "粘液・ゼリー状のもの",
+      "いつもと違う色",
+      "その他",
+      "よく分からない"
+    ],
+    notices: {
+      "赤い血のようなもの": "⚠️ 血のように見えるものや、黒くタール状に見える便がある場合は、動物病院へ相談してください。\n\n量が多い、ぐったりしているなどほかの異変がある場合は、早めの受診を検討してください。",
+      "黒っぽい・タール状に見える": "⚠️ 血のように見えるものや、黒くタール状に見える便がある場合は、動物病院へ相談してください。\n\n量が多い、ぐったりしているなどほかの異変がある場合は、早めの受診を検討してください。"
+    }
+  },
+  {
+    id: "poop_count",
+    category: "poopCount",
+    label: "回数",
+    text: "うんちの回数は、いつもと比べてどうですか？",
+    type: "single",
+    options: ["増えた", "減った", "ほぼ同じ", "便が出ていない", "分からない"]
+  },
+  {
+    id: "poop_toilet_behavior",
+    category: "toiletBehavior",
+    label: "トイレでの様子",
+    text: "トイレでは、どんな様子ですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもどおり", value: "いつもどおり", exclusive: true },
+      "何度もトイレに行く",
+      "長くいきんでいる",
+      "出そうなのに出ない",
+      "鳴く・痛そう",
+      "その他",
+      "分からない"
+    ],
+    notices: {
+      "何度もトイレに行く": "🚨 おしっこが出ているかも確認してください\n\nトイレで何度もいきんでいるのに尿が出ていない、\nまたはほとんど出ていない場合は、\n\n便ではなく、おしっこのトラブルの可能性もあります。\n\n尿が出ていないように見える場合は、\n早めに動物病院へ連絡してください。",
+      "長くいきんでいる": "🚨 おしっこが出ているかも確認してください\n\nトイレで何度もいきんでいるのに尿が出ていない、\nまたはほとんど出ていない場合は、\n\n便ではなく、おしっこのトラブルの可能性もあります。\n\n尿が出ていないように見える場合は、\n早めに動物病院へ連絡してください。",
+      "出そうなのに出ない": "🚨 おしっこが出ているかも確認してください\n\nトイレで何度もいきんでいるのに尿が出ていない、\nまたはほとんど出ていない場合は、\n\n便ではなく、おしっこのトラブルの可能性もあります。\n\n尿が出ていないように見える場合は、\n早めに動物病院へ連絡してください。"
+    }
+  },
+  {
+    id: "poop_appetite",
+    category: "appetite",
+    label: "食欲",
+    text: "食欲はどうですか？",
+    type: "single",
+    options: ["普段どおり", "少し減った", "かなり減った", "食べていない", "分からない"]
+  },
+  {
+    id: "poop_water",
+    category: "water",
+    label: "水",
+    text: "水は飲めていますか？",
+    type: "single",
+    options: ["普段どおり", "少ない気がする", "多い気がする", "飲んでいない", "分からない"]
+  },
+  {
+    id: "poop_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "吐いている",
+      "元気がない",
+      "隠れている",
+      "お腹を痛がる／触られるのを嫌がる",
+      "体重が減った",
+      { label: "特になし", value: "特になし", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "poop_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近、思い当たる変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "フード・おやつを変えた",
+      "普段と違うものを食べた",
+      "薬・サプリを始めた",
+      "環境の変化があった",
+      "異物・薬・植物などを口にした可能性",
+      { label: "特になし", value: "特になし", exclusive: true },
+      "分からない"
+    ],
+    notices: {
+      "異物・薬・植物などを口にした可能性": "⚠️ 異物・薬・植物などを口にした可能性がある場合は、動物病院へ相談してください。"
+    }
+  }
+];
+
+const urineFollowupQuestions = [
+  {
+    id: "urine_output",
+    category: "urineOutput",
+    label: "尿が出ているか",
+    text: "おしっこは出ていますか？",
+    type: "single",
+    options: ["普段どおり出ている", "少しは出ている", "数滴しか出ていない", "何度もトイレに行くが、出ていないように見える", "分からない"],
+    stopOnValues: ["数滴しか出ていない", "何度もトイレに行くが、出ていないように見える"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "何度もおしっこをしようとしているのに、\n尿がほとんど出ていない場合は、\n緊急性のある尿路トラブルで見られるサインです。\n\nねこモヤだけで判断せず、\n動物病院へ連絡して状況を伝えてください。"
+    }
+  },
+  {
+    id: "urine_started_at",
+    category: "urineTiming",
+    label: "いつから",
+    text: "おしっこの変化が気になったのは、いつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "それより前", "分からない"]
+  },
+  {
+    id: "urine_toilet_count",
+    category: "toiletCount",
+    label: "トイレ回数",
+    text: "トイレに行く回数は、いつもと比べてどうですか？",
+    type: "single",
+    options: ["増えた", "減った", "ほぼ同じ", "分からない"]
+  },
+  {
+    id: "urine_amount",
+    category: "urineAmount",
+    label: "1回の尿量",
+    text: "1回のおしっこの量はどうですか？",
+    type: "single",
+    options: ["普段どおり", "少ない", "かなり少ない", "多い", "分からない"]
+  },
+  {
+    id: "urine_appearance",
+    category: "urineAppearance",
+    label: "色、見た目",
+    text: "おしっこの色や見た目で気になることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもと同じ", value: "いつもと同じ", exclusive: true },
+      "赤、ピンクっぽい／血のようなもの",
+      "濃い色に見える",
+      "濁っているように見える",
+      "その他",
+      "分からない"
+    ],
+    notices: {
+      "赤、ピンクっぽい／血のようなもの": "⚠️ 血のように見えるものが混じっている場合は、\n動物病院への相談を検討してください。"
+    }
+  },
+  {
+    id: "urine_behavior",
+    category: "urineBehavior",
+    label: "排尿時の様子",
+    text: "おしっこをするとき、こんな様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもどおり", value: "いつもどおり", exclusive: true },
+      "長くいきんでいる",
+      "鳴く、痛そう",
+      "何度もトイレに出たり入ったりする",
+      "陰部をよくなめる",
+      "トイレ以外でしてしまう",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "urine_water",
+    category: "water",
+    label: "水",
+    text: "水の飲み方に変化はありますか？",
+    type: "single",
+    options: ["普段どおり", "多くなった", "少なくなった", "ほとんど飲まない", "分からない"]
+  },
+  {
+    id: "urine_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "食欲が落ちている",
+      "元気がない",
+      "吐いている",
+      "隠れている",
+      "お腹を触られるのを嫌がる",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "urine_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近、暮らしで変わったことはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "引っ越し、模様替え",
+      "トイレや猫砂を変えた",
+      "新しい家族、猫が増えた",
+      "生活リズムが変わった",
+      "フードを変えた",
+      "薬を飲み始めた／変更した",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  }
+];
+
 const answers = {};
 let currentVomitQuestionIndex = 0;
 let currentFlowKey = "vomit";
@@ -403,6 +647,38 @@ const symptomFlowConfigs = {
       "食べたフードの商品名／パッケージ",
       "最近の体重が分かればその記録",
       "吐いた、下痢などがある場合はその記録"
+    ]
+  },
+  poop: {
+    questions: poopFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "便の写真",
+      "いつから変わったか",
+      "回数",
+      "色・形・硬さ",
+      "血や粘液の有無",
+      "食欲・水・元気",
+      "嘔吐など他の症状",
+      "最近食べたもの",
+      "フード変更",
+      "誤食の可能性"
+    ]
+  },
+  urine: {
+    questions: urineFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "トイレに行った回数",
+      "実際に尿が出た回数",
+      "1回の尿量の目安",
+      "尿の色",
+      "血のようなものの有無",
+      "トイレでの様子",
+      "食欲、元気",
+      "水の飲み方",
+      "嘔吐の有無",
+      "最近の環境変化"
     ]
   }
 };
@@ -461,7 +737,7 @@ function showView(viewId) {
   if (viewId === "vomit-check") {
     resetVomitCheckPage();
   }
-  const navViewId = ["vomit-detail", "appetite-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
+  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -569,13 +845,11 @@ document.querySelector("#dangerSignForm")?.addEventListener("submit", (event) =>
   }
 
   if (selected.some((value) => value !== "none")) {
-    result.classList.add("urgent");
-    result.innerHTML = `
-      <span class="result-label">確認を止める目安</span>
-      <h2>チェックをいったんここで止めましょう</h2>
-      <p>入力された内容には、緊急性のある状態で見られるサインが含まれています。ねこモヤだけで判断せず、動物病院へ連絡して状況を伝えてください。</p>
-    `;
-    result.scrollIntoView({ behavior: "smooth", block: "start" });
+    showStopResult({
+      label: "確認を止める目安",
+      title: "チェックをいったんここで止めましょう",
+      body: "入力された内容には、緊急性のある状態で見られるサインが含まれています。ねこモヤだけで判断せず、動物病院へ連絡して状況を伝えてください。"
+    });
     return;
   }
 
@@ -590,6 +864,21 @@ function startVomitQuestionFlow() {
   document.querySelector("#vomitSummary").hidden = true;
   document.querySelector("#vomitQuestionFlow").hidden = false;
   renderVomitQuestion();
+}
+
+function showStopResult({ label, title, body }) {
+  const result = document.querySelector("#dangerResult");
+  if (!result) return;
+  document.querySelector("#vomitQuestionFlow").hidden = true;
+  document.querySelector("#vomitSummary").hidden = true;
+  result.hidden = false;
+  result.className = `result-card urgent${title.startsWith("🚨") ? " has-heading-icon" : ""}`;
+  result.innerHTML = `
+    <span class="result-label">${escapeHtml(label)}</span>
+    <h2>${escapeHtml(title)}</h2>
+    <p>${escapeHtml(body)}</p>
+  `;
+  result.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function getOptionData(option) {
@@ -701,6 +990,13 @@ function showInlineQuestionNotice(message) {
 document.querySelector("#vomitQuestionForm")?.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!saveCurrentVomitAnswer()) return;
+
+  const question = getCurrentQuestions()[currentVomitQuestionIndex];
+  const selectedValues = answers[question.id]?.values || [];
+  if (question.stopOnValues?.some((value) => selectedValues.includes(value))) {
+    showStopResult(question.stopResult);
+    return;
+  }
 
   if (currentVomitQuestionIndex < getCurrentQuestions().length - 1) {
     currentVomitQuestionIndex += 1;
