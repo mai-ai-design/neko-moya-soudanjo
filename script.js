@@ -153,12 +153,12 @@ const symptomCategories = [
   { icon: "🍚", title: "食べない・食欲がおかしい", view: "appetite-detail", ready: true },
   { icon: "💩", title: "うんちがおかしい", view: "poop-detail", ready: true },
   { icon: "🚽", title: "おしっこがおかしい", view: "urine-detail", ready: true },
-  { icon: "💧", title: "水の飲み方がおかしい" },
-  { icon: "😿", title: "元気・様子がおかしい" },
-  { icon: "💨", title: "呼吸・咳・くしゃみ" },
-  { icon: "👁️", title: "目がおかしい" },
-  { icon: "👂", title: "耳がおかしい" },
-  { icon: "👄", title: "口・歯がおかしい" },
+  { icon: "💧", title: "水の飲み方がおかしい", view: "water-detail", ready: true },
+  { icon: "😿", title: "元気・様子がおかしい", view: "energy-detail", ready: true },
+  { icon: "💨", title: "呼吸・咳・くしゃみ", view: "breathing-detail", ready: true },
+  { icon: "👁️", title: "目がおかしい", view: "eye-detail", ready: true },
+  { icon: "👂", title: "耳がおかしい", view: "ear-detail", ready: true },
+  { icon: "👄", title: "口・歯がおかしい", view: "mouth-detail", ready: true },
   { icon: "🩹", title: "皮膚・毛がおかしい" },
   { icon: "🐾", title: "歩き方・動きがおかしい" },
   { icon: "⚖️", title: "体重・体型が変わった" },
@@ -625,6 +625,780 @@ const urineFollowupQuestions = [
   }
 ];
 
+const waterFollowupQuestions = [
+  {
+    id: "water_drinking_change",
+    category: "waterDrinkingChange",
+    label: "水の飲み方の変化",
+    text: "水の飲み方は、いつもと比べてどうですか？",
+    type: "single",
+    options: ["明らかに増えた", "少し増えた気がする", "少なくなった", "ほとんど飲んでいない", "飲み方が変わった気がするが、量は分からない", "分からない"]
+  },
+  {
+    id: "water_started_at",
+    category: "waterTiming",
+    label: "いつから",
+    text: "水の飲み方が気になったのは、いつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "1週間くらい前", "それより前", "分からない"]
+  },
+  {
+    id: "water_drinking_style",
+    category: "waterDrinkingStyle",
+    label: "どんな飲み方の変化",
+    text: "どんな変化が気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "水を飲みに行く回数が増えた",
+      "1回に飲む量が増えたように見える",
+      "長い時間飲むようになった",
+      "水皿の減りが以前より早い気がする",
+      "飲みに行く回数が減った",
+      "水の前まで行くけれど、あまり飲まない",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "water_food_type",
+    category: "foodType",
+    label: "普段のフード",
+    text: "普段のごはんは、どれに近いですか？",
+    type: "single",
+    options: ["ドライフード中心", "ウェットフード中心", "ドライとウェットの両方", "最近フードを変えた", "分からない"]
+  },
+  {
+    id: "water_urine_change",
+    category: "urineChange",
+    label: "おしっこの変化",
+    text: "おしっこに変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "量が増えた気がする",
+      "回数が増えた",
+      "量が減った気がする",
+      "回数が減った",
+      "何度もトイレに行くのに、ほとんど出ていない",
+      { label: "特に変わらない", value: "特に変わらない", exclusive: true },
+      "分からない"
+    ],
+    stopOnValues: ["何度もトイレに行くのに、ほとんど出ていない"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "何度もおしっこをしようとしているのに、\n尿がほとんど出ていない場合は、\n緊急性のある尿路トラブルで見られるサインです。\n\n水の飲み方のチェックより先に、\nねこモヤだけで判断せず、\n動物病院へ連絡して状況を伝えてください。"
+    }
+  },
+  {
+    id: "water_appetite",
+    category: "appetite",
+    label: "食欲",
+    text: "食欲はどうですか？",
+    type: "single",
+    options: ["普段どおり", "少し減った", "かなり減った", "食べていない", "増えた気がする", "分からない"]
+  },
+  {
+    id: "water_body_change",
+    category: "bodyChange",
+    label: "体重／体つき",
+    text: "最近、体重や体つきに変化はありますか？",
+    type: "single",
+    options: ["変わらない", "体重が減った", "体重が増えた", "少し痩せた気がする", "少し太った気がする", "分からない"]
+  },
+  {
+    id: "water_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "元気がない",
+      "吐いている",
+      "下痢をしている",
+      "隠れることが増えた",
+      "毛づや、毛並みが変わった気がする",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "water_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近、思い当たる変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "フードを変えた",
+      "ドライ／ウェットの割合が変わった",
+      "水皿や給水器を変えた",
+      "水皿の場所を変えた",
+      "暑くなった／室温が変わった",
+      "薬やサプリを始めた／変更した",
+      "生活環境が変わった",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  }
+];
+
+const energyFollowupQuestions = [
+  {
+    id: "energy_main_changes",
+    category: "mainChanges",
+    label: "気になった様子",
+    text: "どんな様子が一番気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "いつもより動かない",
+      "寝ている時間が増えた",
+      "遊ばなくなった",
+      "隠れることが増えた",
+      "呼んでも反応が鈍い気がする",
+      "人を避けるようになった",
+      "いつもより甘える／離れなくなった",
+      "鳴くことが増えた／鳴き方が変わった",
+      "なんとなく普段と違う",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "energy_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "変化が気になったのは、いつ頃からですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "1週間くらい前", "それより前", "分からない"]
+  },
+  {
+    id: "energy_movement",
+    category: "movement",
+    label: "動き方",
+    text: "動き方に変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもどおり", value: "いつもどおり", exclusive: true },
+      "動くのがゆっくり",
+      "歩き方がいつもと違う",
+      "ジャンプしなくなった／ためらう",
+      "高いところへ行かなくなった",
+      "立ち上がりにくそう",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "energy_appetite",
+    category: "appetite",
+    label: "食欲、食べ方",
+    text: "食欲や食べ方に変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "普段どおり", value: "普段どおり", exclusive: true },
+      "食べる量が少し減った",
+      "食べる量がかなり減った",
+      "食べていない",
+      "食欲が増えた気がする",
+      "食べたそうにするが、食べにくそう",
+      "食べ物を口から落とす",
+      "食べるのに時間がかかるようになった",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "energy_water_toilet",
+    category: "waterToilet",
+    label: "水、トイレ",
+    text: "水やトイレに変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "水を飲む量が増えた気がする",
+      "水を飲む量が減った気がする",
+      "おしっこの量や回数が変わった",
+      "うんちが変わった",
+      "何度もトイレに行くのに尿がほとんど出ない",
+      { label: "特に変わらない", value: "特に変わらない", exclusive: true },
+      "分からない"
+    ],
+    stopOnValues: ["何度もトイレに行くのに尿がほとんど出ない"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "何度もおしっこをしようとしているのに、\n尿がほとんど出ていない場合は、\n緊急性のある尿路トラブルで見られるサインです。\n\nねこモヤだけで判断せず、\n動物病院へ連絡して状況を伝えてください。"
+    }
+  },
+  {
+    id: "energy_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "吐いている",
+      "下痢をしている",
+      "咳、くしゃみ",
+      "呼吸がいつもと違う",
+      "目や鼻から何か出ている",
+      "毛づくろいをしなくなった",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "energy_touch_behavior",
+    category: "touchBehavior",
+    label: "触ったときの様子",
+    text: "触ったときや抱っこしたとき、いつもと違う様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "いつもどおり", value: "いつもどおり", exclusive: true },
+      "触られるのを嫌がる",
+      "特定の場所を触ると嫌がる",
+      "抱っこを嫌がるようになった",
+      "怒る／鳴く",
+      "体を丸めてじっとしていることがある",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "energy_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近、思い当たる変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "引っ越し、模様替え",
+      "新しい家族や猫が増えた",
+      "留守番時間や生活リズムが変わった",
+      "フードを変えた",
+      "薬やサプリを始めた／変更した",
+      "ケガや落下などの心当たりがある",
+      "異物、薬、植物などを口にした可能性がある",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ],
+    stopOnValues: ["異物、薬、植物などを口にした可能性がある"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "異物、薬、植物などを口にした可能性がある場合は、\nねこモヤだけで判断せず、\n動物病院へ連絡して状況を伝えてください。"
+    }
+  }
+];
+
+const breathingFollowupQuestions = [
+  {
+    id: "breathing_main_changes",
+    category: "mainChanges",
+    label: "気になる様子",
+    text: "いちばん気になるのはどんな様子ですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "咳をしているように見える",
+      "くしゃみ",
+      {
+        label: "普段からくしゃみはするが、いつもより増えた／様子が違う",
+        value: "普段からくしゃみあり／今回はいつもより増えた"
+      },
+      "咳か吐こうとしているのか分からない",
+      "鼻水",
+      "呼吸音がいつもと違う",
+      "呼吸が速い気がする",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "breathing_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "気になる様子は、いつ頃からありますか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "1週間くらい前", "それより前", "以前から繰り返している", "分からない"]
+  },
+  {
+    id: "breathing_frequency",
+    category: "frequency",
+    label: "頻度",
+    text: "どのくらい見られますか？",
+    type: "single",
+    options: ["1回だけ", "ときどき", "1日に何度か", "何度も繰り返している", "以前から繰り返している", "分からない"]
+  },
+  {
+    id: "breathing_nose_eyes",
+    category: "noseEyes",
+    label: "鼻、目の様子",
+    text: "鼻水や目の様子に変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "透明でさらさらした鼻水",
+      "白っぽい／濁った鼻水",
+      "黄色、緑っぽい鼻水",
+      "血が混じっているように見える",
+      "鼻水が片方の鼻だけから出ている",
+      "鼻がつまっているように見える",
+      "目やにが増えた",
+      "涙が増えた",
+      "目をしょぼしょぼさせている",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "よく分からない"
+    ],
+    note: "🐾 きなこメモ\n\nくしゃみのあと、\n壁や床などに鼻水が飛んでいたら、\n色や状態も観察の参考になります。\n\n無理に鼻を触って確認しなくても大丈夫です。"
+  },
+  {
+    id: "breathing_appetite_energy",
+    category: "appetiteEnergy",
+    label: "食欲、元気",
+    text: "食欲や元気はどうですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      { label: "普段どおり", value: "普段どおり", exclusive: true },
+      "食欲が少し落ちた",
+      "ほとんど食べていない",
+      "元気がない",
+      "寝ている時間が増えた",
+      "隠れることが増えた",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "breathing_other_changes",
+    category: "otherChanges",
+    label: "ほかの気になる変化",
+    text: "ほかに気になることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "吐いている",
+      "吐こうとするような動きがある",
+      "よだれが増えた",
+      "声が変わった気がする",
+      "食べにくそう",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "breathing_recent_changes",
+    category: "recentChanges",
+    label: "最近の環境変化",
+    text: "最近、思い当たる変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "部屋の掃除、模様替え",
+      "猫砂を変えた",
+      "芳香剤、スプレーなどを使った",
+      "煙や強いにおいがあった",
+      "新しい猫や家族が増えた",
+      "外へ出た／ほかの猫と接触した",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  }
+];
+
+const eyeFollowupQuestions = [
+  {
+    id: "eye_side",
+    category: "eyeSide",
+    label: "気になる目",
+    text: "どちらの目が気になりますか？",
+    type: "single",
+    options: ["右目", "左目", "両目", "分からない"]
+  },
+  {
+    id: "eye_changes",
+    category: "eyeChanges",
+    label: "気になる変化",
+    text: "どんな変化がありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "目やにが増えた",
+      "涙が増えた",
+      "赤い",
+      "腫れている",
+      "目を細めている",
+      "目を閉じていることが増えた",
+      "目をこする／気にしている",
+      "白っぽい／曇って見える",
+      "目の見た目や色が変わった",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "eye_discharge_tears",
+    category: "dischargeTears",
+    label: "目やに／涙",
+    text: "目やにや涙はどんな様子ですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "透明でさらさらしている",
+      "白っぽい／濁っている",
+      "黄色、緑っぽい",
+      "茶色っぽい",
+      "血が混じっているように見える",
+      "乾いて固まっている",
+      { label: "特に出ていない", value: "特に出ていない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "eye_appearance",
+    category: "appearance",
+    label: "左右差／見た目",
+    text: "目の見た目にこんな変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "左右の瞳孔の大きさが違う",
+      "片方の目だけ白っぽい／濁っている",
+      "目が以前より大きく見える",
+      "目が以前より小さく見える",
+      "目頭から白っぽい膜が出ている／目立つ",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "eye_behavior",
+    category: "visionBehavior",
+    label: "見え方が変わったような行動",
+    text: "見え方が変わったように感じる行動はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "物にぶつかるようになった",
+      "段差や階段をためらう",
+      "ジャンプをためらう",
+      "食器や水の場所を探すようになった",
+      "トイレを探すようになった",
+      "呼びかけられると周りを探すような動きをする",
+      "急に不安そうになる／固まることがある",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "eye_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "くしゃみ",
+      "鼻水",
+      "食欲が落ちている",
+      "元気がない",
+      "吐いている",
+      "鳴くことが増えた／鳴き方や様子が違う",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "eye_recent_changes",
+    category: "recentChanges",
+    label: "最近の心当たり",
+    text: "最近、思い当たることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "猫同士でケンカした",
+      "どこかにぶつかった／落ちた",
+      "目の近くを引っかいた可能性がある",
+      "シャンプー、洗剤などが目に入った可能性がある",
+      "新しい薬、目薬を使い始めた",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  }
+];
+
+const earFollowupQuestions = [
+  {
+    id: "ear_side",
+    category: "earSide",
+    label: "気になる耳",
+    text: "どの耳が気になりますか？",
+    type: "single",
+    options: ["右耳", "左耳", "両耳", "どちらか分からない"]
+  },
+  {
+    id: "ear_changes",
+    category: "earChanges",
+    label: "気になる変化",
+    text: "どんな変化が気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "耳垢が増えた",
+      "耳垢の見た目が変わった",
+      "においが気になる",
+      "耳が赤い",
+      "耳が腫れている",
+      "耳をよく掻く",
+      "頭をよく振る",
+      "顔や耳をこすりつける",
+      "耳を触られるのを嫌がるようになった",
+      "片方の耳を下げることが増えた",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "ear_wax",
+    category: "earWax",
+    label: "耳垢の様子",
+    text: "耳垢や耳の中はどんな様子ですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "黒っぽい",
+      "濃い茶色",
+      "薄い茶色",
+      "黄色っぽい",
+      "白っぽい",
+      "湿っている／ベタっとしている",
+      "乾いている／ポロポロしている",
+      "液体っぽいものがある",
+      "血が混じっているように見える",
+      "普段より量が多い",
+      { label: "普段とあまり変わらない", value: "普段とあまり変わらない", exclusive: true },
+      { label: "耳垢は特に見えない", value: "耳垢は特に見えない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "ear_smell_appearance",
+    category: "smellAppearance",
+    label: "におい／見た目",
+    text: "耳のにおいや見た目に変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "いつもよりにおう",
+      "強いにおいがする",
+      "赤く見える",
+      "腫れている",
+      "かさぶた／傷がある",
+      "耳の周りの毛が抜けている",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "ear_behavior",
+    category: "earBehavior",
+    label: "かゆみ／痛み／行動",
+    text: "耳を気にする様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "耳を何度も掻く",
+      "頭を振る",
+      "耳や顔を家具などにこすりつける",
+      "耳を触ると嫌がる",
+      "耳を触ると鳴く／逃げる",
+      "片方の耳を下げることが増えた",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "ear_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかの気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "元気がない",
+      "食欲が落ちている",
+      "くしゃみ／鼻水",
+      "目やに／涙",
+      "吐いている",
+      "ふらつく",
+      "頭を傾ける",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ],
+    notices: {
+      "ふらつく": "耳の症状と一緒に、\nバランスや頭の傾きにも変化があるようです。\nねこモヤだけで判断せず、\n動物病院へ相談して今の様子を伝えてください。",
+      "頭を傾ける": "耳の症状と一緒に、\nバランスや頭の傾きにも変化があるようです。\nねこモヤだけで判断せず、\n動物病院へ相談して今の様子を伝えてください。"
+    }
+  },
+  {
+    id: "ear_recent_changes",
+    category: "recentChanges",
+    label: "最近の心当たり",
+    text: "最近、思い当たることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "最近、耳掃除をした",
+      "新しい耳クリーナー／薬を使った",
+      "シャンプーをした",
+      "外へ出た／ほかの猫と接触した",
+      "猫同士でケンカした",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  }
+];
+
+const mouthFollowupQuestions = [
+  {
+    id: "mouth_changes",
+    category: "mouthChanges",
+    label: "気になる変化",
+    text: "どんなことが気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "口臭",
+      "よだれ",
+      "歯ぐきの赤み",
+      "歯ぐきの腫れ",
+      "口の中の出血",
+      "歯の見た目が変わった",
+      "歯が欠けた／抜けたように見える",
+      "口元／顔が腫れている",
+      "口を前足で気にする",
+      "食べ方がおかしい",
+      "その他",
+      "分からない"
+    ]
+  },
+  {
+    id: "mouth_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "その変化に気づいたのはいつ頃ですか？",
+    type: "single",
+    options: ["今日", "昨日", "2〜3日前", "1週間くらい前", "それより前", "以前からあるが最近変わった", "分からない"]
+  },
+  {
+    id: "mouth_trying_to_eat",
+    category: "tryingToEat",
+    label: "食べようとする様子",
+    text: "食べようとする様子はどうですか？",
+    type: "single",
+    options: [
+      "普段どおり食べる",
+      "食べたそうにして、食べられる",
+      "食べたそうにするが、食べ始めにくそう",
+      "食べ始めるが、途中でやめる",
+      "食べ物に近づくが、食べずに離れる",
+      "ほとんど食べようとしない",
+      "分からない"
+    ]
+  },
+  {
+    id: "mouth_eating_behavior",
+    category: "eatingBehavior",
+    label: "実際の食べ方",
+    text: "食べているとき、こんな変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "食べ物を口から落とす",
+      "食べるのが遅くなった",
+      "何度も食べ直す",
+      "頭を傾けて食べる",
+      "片側だけで噛んでいるように見える",
+      "硬いフードを避ける",
+      "柔らかいものなら食べやすそう",
+      "丸飲みするようになった",
+      "食事中に鳴く／急に離れる",
+      "飲み込みにくそう",
+      { label: "普段とあまり変わらない", value: "普段とあまり変わらない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "mouth_visible_changes",
+    category: "visibleChanges",
+    label: "よだれ／口元の見た目",
+    text: "見える範囲で、口元に変化はありますか？",
+    help: "無理に口を開けて確認する必要はありません。\nいくつでも選べます。",
+    type: "multiple",
+    options: [
+      "よだれが増えた",
+      "よだれに血が混じっているように見える",
+      "歯ぐきが赤い",
+      "歯ぐきが腫れている",
+      "口の中に傷／できもののようなものが見える",
+      "歯が欠けた／抜けたように見える",
+      "口元／顔が腫れている",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "mouth_face_behavior",
+    category: "faceBehavior",
+    label: "口や顔を気にする行動",
+    text: "口や顔を気にする様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "前足で口を触る／こする",
+      "顔を家具などにこすりつける",
+      "口元を触られるのを嫌がる",
+      "あくびや口を開けたときに嫌がる",
+      "口をくちゃくちゃ／もぐもぐすることが増えた",
+      "鳴き方や食事中の反応が変わった",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ]
+  },
+  {
+    id: "mouth_care_recent",
+    category: "careRecent",
+    label: "普段の口腔ケア／最近のこと",
+    text: "最近の口まわりのケアや、思い当たることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [
+      "猫用歯ブラシで歯磨きをしている",
+      "歯磨きシート／ガーゼなどを使っている",
+      "デンタルケア用のおやつを食べている",
+      "デンタルケア用のおもちゃ／噛むおもちゃを使っている",
+      "最近、新しいデンタルケア用品を使い始めた",
+      "最近、口や顔をぶつけた可能性がある",
+      "硬いものを噛んだ可能性がある",
+      "糸、ひもなどの異物を口にした可能性がある",
+      { label: "特にない", value: "特にない", exclusive: true },
+      "分からない"
+    ],
+    notices: {
+      "糸、ひもなどの異物を口にした可能性がある": "糸やひもなどを口にした可能性がある場合は、\nねこモヤだけで判断せず、\n動物病院へ連絡して今の様子を伝えてください。\n\n口から糸やひものようなものが見えても、\n無理に引っ張らないでください。"
+    }
+  }
+];
+
 const answers = {};
 let currentVomitQuestionIndex = 0;
 let currentFlowKey = "vomit";
@@ -680,6 +1454,131 @@ const symptomFlowConfigs = {
       "嘔吐の有無",
       "最近の環境変化"
     ]
+  },
+  water: {
+    questions: waterFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから変わったか",
+      "水を飲む姿を以前よりよく見るか",
+      "水皿の減り方",
+      "普段のフード",
+      "おしっこの量や回数",
+      "食欲",
+      "体重や体つき",
+      "嘔吐、下痢",
+      "最近の薬やサプリ",
+      "生活環境の変化"
+    ],
+    photoNote: "正確な飲水量が分からなくても大丈夫です。\n「以前より水を飲む姿をよく見る」\n「水皿の減りが早くなった気がする」など、\n気づいた変化を伝えられるようにしておきましょう。\n\n※多頭飼いでは個体ごとの正確な飲水量を測れない場合があります。"
+  },
+  energy: {
+    questions: energyFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから変わったか",
+      "どんな行動が変わったか",
+      "鳴く回数や鳴き方",
+      "寝る時間",
+      "遊びへの反応",
+      "食欲、食べ方",
+      "水",
+      "排泄",
+      "嘔吐、下痢",
+      "歩き方、動き方",
+      "最近の環境変化"
+    ],
+    photoNote: "歩き方や鳴き方、食べるときの様子など、\n普段と違う行動が見られる場合は、\n可能であれば動画を残しておくと、\n動物病院で様子を伝える参考になることがあります。"
+  },
+  breathing: {
+    questions: breathingFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから",
+      "咳、くしゃみの頻度",
+      "普段との違い",
+      "どんな姿勢でしているか",
+      "呼吸の様子",
+      "呼吸音",
+      "鼻水の色や状態",
+      "鼻水が片方か両方か",
+      "目やに、涙",
+      "食欲",
+      "元気",
+      "吐く動きがあるか",
+      "最近の環境変化"
+    ],
+    photoNote: "咳なのか吐こうとしているのか分からない場合や、\n呼吸音、呼吸の様子が気になる場合は、\n無理のない範囲で動画を残しておくと、\n動物病院で様子を伝える参考になることがあります。"
+  },
+  eye: {
+    questions: eyeFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから",
+      "右目／左目／両目",
+      "目やにの色、状態",
+      "涙",
+      "赤み",
+      "腫れ",
+      "目を開けられているか",
+      "白っぽさ／濁り",
+      "瞳孔の左右差",
+      "目頭の白っぽい膜",
+      "見え方が変わったような行動",
+      "くしゃみ、鼻水",
+      "元気",
+      "食欲",
+      "ケガなどの心当たり"
+    ],
+    photoNote: "目の赤み、濁り、目やになどが気になる場合は、\n無理のない範囲で写真を残しておくと、\n動物病院で経過を伝える参考になることがあります。"
+  },
+  ear: {
+    questions: earFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから",
+      "右耳／左耳／両耳",
+      "普段の耳との違い",
+      "耳垢の量",
+      "耳垢の色",
+      "湿っている／乾いている",
+      "におい",
+      "赤み",
+      "腫れ",
+      "掻く回数",
+      "頭を振る回数",
+      "耳を触ったときの反応",
+      "頭の傾き",
+      "ふらつき",
+      "元気",
+      "食欲",
+      "最近の耳掃除",
+      "使用した耳クリーナー／薬"
+    ],
+    photoNote: "耳垢の色や量、耳の赤みなどが気になる場合は、\n無理のない範囲で写真を残しておくと、\n動物病院で経過を伝える参考になることがあります。"
+  },
+  mouth: {
+    questions: mouthFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつから",
+      "口臭",
+      "よだれ",
+      "歯ぐきの見た目",
+      "歯の見た目",
+      "口元／顔の腫れ",
+      "食べたそうにするか",
+      "実際の食べ方",
+      "食べ物を落とすか",
+      "食べる速度",
+      "硬い／柔らかい食べ物で違いがあるか",
+      "食事中の反応",
+      "元気",
+      "体重変化",
+      "普段の口腔ケア",
+      "最近使用したデンタルケア用品"
+    ],
+    photoNote: "食べ方がいつもと違う場合は、\n無理のない範囲で食事中の様子を動画に残しておくと、\n動物病院で経過を伝える参考になることがあります。"
   }
 };
 
@@ -737,7 +1636,7 @@ function showView(viewId) {
   if (viewId === "vomit-check") {
     resetVomitCheckPage();
   }
-  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
+  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -958,8 +1857,9 @@ function bindExclusiveOptions(optionsRoot) {
 function updateQuestionNotice(question, optionsRoot, notice) {
   const selectedLabels = [...optionsRoot.querySelectorAll("input:checked")].map((input) => input.value);
   const message = selectedLabels.map((label) => question.notices?.[label]).find(Boolean);
-  notice.hidden = !message;
-  notice.textContent = message || "";
+  const fallbackMessage = question.note || "";
+  notice.hidden = !message && !fallbackMessage;
+  notice.textContent = message || fallbackMessage;
 }
 
 function saveCurrentVomitAnswer() {
@@ -994,7 +1894,11 @@ document.querySelector("#vomitQuestionForm")?.addEventListener("submit", (event)
   const question = getCurrentQuestions()[currentVomitQuestionIndex];
   const selectedValues = answers[question.id]?.values || [];
   if (question.stopOnValues?.some((value) => selectedValues.includes(value))) {
-    showStopResult(question.stopResult);
+    const appendMessage = selectedValues.map((value) => question.stopAppendByValues?.[value]).find(Boolean);
+    showStopResult({
+      ...question.stopResult,
+      body: appendMessage ? `${question.stopResult.body}\n\n${appendMessage}` : question.stopResult.body
+    });
     return;
   }
 
@@ -1022,7 +1926,8 @@ function renderVomitSummary() {
   const summary = document.querySelector("#vomitSummary");
   const list = document.querySelector("#vomitSummaryList");
   const photoList = document.querySelector("#summaryPhotoList");
-  list.innerHTML = flowConfig.questions.map((question) => {
+  const photoNote = document.querySelector("#summaryPhotoNote");
+  list.innerHTML = flowConfig.questions.filter((question) => !question.skipSummary).map((question) => {
     const values = answers[question.id]?.values || ["未選択"];
     return `
       <div>
@@ -1033,6 +1938,10 @@ function renderVomitSummary() {
   }).join("");
   if (photoList) {
     photoList.innerHTML = flowConfig.photoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  }
+  if (photoNote) {
+    photoNote.hidden = !flowConfig.photoNote;
+    photoNote.textContent = flowConfig.photoNote || "";
   }
   summary.hidden = false;
   summary.scrollIntoView({ behavior: "smooth", block: "start" });
