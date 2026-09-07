@@ -159,10 +159,10 @@ const symptomCategories = [
   { icon: "👁️", title: "目がおかしい", view: "eye-detail", ready: true },
   { icon: "👂", title: "耳がおかしい", view: "ear-detail", ready: true },
   { icon: "👄", title: "口・歯がおかしい", view: "mouth-detail", ready: true },
-  { icon: "🩹", title: "皮膚・毛がおかしい" },
-  { icon: "🐾", title: "歩き方・動きがおかしい" },
-  { icon: "⚖️", title: "体重・体型が変わった" },
-  { icon: "⚠️", title: "けいれん・意識・急な異変" }
+  { icon: "🩹", title: "皮膚・毛がおかしい", view: "skin-detail", ready: true },
+  { icon: "🐾", title: "歩き方・動きがおかしい", view: "movement-detail", ready: true },
+  { icon: "⚖️", title: "体重・体型が変わった", view: "weight-detail", ready: true },
+  { icon: "⚠️", title: "けいれん・意識・急な異変", view: "acute-detail", ready: true }
 ];
 
 const dangerQuestions = [
@@ -1399,6 +1399,259 @@ const mouthFollowupQuestions = [
   }
 ];
 
+const skinFollowupQuestions = [
+  {
+    id: "skin_locations",
+    category: "locations",
+    label: "気になる場所",
+    text: "どこが気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["顔", "耳のまわり", "首", "背中", "お腹", "わき", "前足", "後ろ足", "お尻まわり", "しっぽ", "全身", "場所がいくつもある", "分からない"]
+  },
+  {
+    id: "skin_appearance",
+    category: "appearance",
+    label: "見た目",
+    text: "見た目で気になるものはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["毛が薄くなった／抜けている", "赤い", "腫れている", "フケが増えた", "かさぶた", "ブツブツ", "傷", "ジュクジュク／液体が出ている", "ベタつく／脂っぽい", "乾燥している", "皮膚の色が変わった", "しこり／できもの", "毛づやが変わった", { label: "見た目にはよく分からない", value: "見た目にはよく分からない", exclusive: true }, "その他", "分からない"]
+  },
+  {
+    id: "skin_behavior",
+    category: "behavior",
+    label: "気にする様子",
+    text: "その場所を気にする様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["よく掻く", "何度も舐める", "噛む", "毛を引っ張る／むしるように見える", "家具や床などにこすりつける", "触られるのを嫌がる", { label: "特に気にしている様子はない", value: "特に気にしている様子はない", exclusive: true }, "見ていないので分からない"]
+  },
+  {
+    id: "skin_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "いつから気になりますか？",
+    type: "single",
+    options: ["今日気づいた", "2〜3日前", "1週間くらい前", "数週間前", "それより前", "以前からあるが最近変わった", "分からない"]
+  },
+  {
+    id: "skin_change",
+    category: "change",
+    label: "最初に気づいたときからの変化",
+    text: "最初に気づいたときと比べてどうですか？",
+    type: "single",
+    options: ["広がっている", "数が増えている", "赤みなどが強くなっている", "掻く／舐める回数が増えた", "良くなったり悪くなったりする", "あまり変わらない", "少し落ち着いてきた", "今日初めてなので分からない", "分からない"]
+  },
+  {
+    id: "skin_lump",
+    category: "lump",
+    label: "しこり・できもの",
+    text: "しこり・できものはありますか？",
+    type: "single",
+    options: ["ある", "ない", "分からない／確認できない"]
+  },
+  {
+    id: "skin_lump_details",
+    category: "lumpDetails",
+    label: "しこり・できものの様子",
+    text: "しこり・できものについて、分かる範囲で教えてください。",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    showWhen: (currentAnswers) => currentAnswers.skin_lump?.values.includes("ある"),
+    options: ["1つ", "複数", "大きくなっている気がする", "見た目が変わった", "赤い", "出血している", "液体が出ている", "猫が気にしている", "詳しくは分からない"]
+  },
+  {
+    id: "skin_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかに気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["元気がない", "食欲が落ちている", "吐いている", "下痢／うんちの変化", "くしゃみ／鼻水", "耳も気にしている", "体重が変わったように感じる", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  },
+  {
+    id: "skin_recent_changes",
+    category: "recentChanges",
+    label: "最近の変化",
+    text: "最近変わったことはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["フード／おやつが変わった", "シャンプー／ケア用品を変えた", "首輪／ハーネスを変えた", "洗剤／柔軟剤／掃除用品を変えた", "新しいベッド／毛布／家具などを使い始めた", "外へ出た", "ほかの動物と接触した", "最近薬を使い始めた", "ノミ・ダニ予防薬を使っている", "最近ノミ・ダニ予防薬を変更した", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  }
+];
+
+const movementFollowupQuestions = [
+  {
+    id: "movement_concern",
+    category: "movementConcern",
+    label: "気になる動き",
+    text: "いちばん気になる動きはどれですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["足をかばって歩く", "足を浮かせることがある", "足を引きずる", "歩き方がぎこちない", "ジャンプしなくなった／ためらう", "高いところに上がらなくなった", "階段を避ける", "立ち上がりにくそう", "動きがゆっくり／慎重になった", "ふらつく", "動きたがらない", "その他", "分からない"]
+  },
+  {
+    id: "movement_location",
+    category: "location",
+    label: "気になる場所",
+    text: "どのあたりが気になりますか？",
+    type: "single",
+    options: ["右前足", "左前足", "右後ろ足", "左後ろ足", "前足のどちらか", "後ろ足のどちらか", "複数の足", "腰／背中あたり", "体全体", "分からない"]
+  },
+  {
+    id: "movement_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "いつから気になりますか？",
+    type: "single",
+    options: ["今日突然", "2〜3日前", "1週間くらい前", "数週間前", "それより前", "以前からあるが最近変わった", "分からない"]
+  },
+  {
+    id: "movement_walking",
+    category: "walkingAbility",
+    label: "歩いたり立ったりする様子",
+    text: "歩いたり立ったりすることはできますか？",
+    type: "single",
+    options: ["普段どおり立って歩ける", "少しかばうが、自分で歩ける", "足をほとんど地面につけない", "立つのがかなり難しそう", "自分で立てない／歩けない", "分からない"],
+    notices: {
+      "足をほとんど地面につけない": "足をほとんど地面につけない様子がある場合は、\nねこモヤだけで判断せず、\n動物病院へ相談して今の様子を伝えてください。"
+    },
+    stopOnValues: ["自分で立てない／歩けない"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "自分で立てない・歩けない状態は、\nねこモヤだけで判断せず、\n動物病院へ連絡して今の様子を伝えてください。"
+    }
+  },
+  {
+    id: "movement_situations",
+    category: "situations",
+    label: "気になる場面",
+    text: "どんな場面で気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["普通に歩くとき", "走るとき", "ジャンプする前", "ジャンプして着地するとき", "階段", "立ち上がるとき", "座る／横になるとき", "トイレに入る／出るとき", "グルーミングするとき", "寝起き", { label: "いつも", value: "いつも", exclusive: true }, { label: "ときどき", value: "ときどき", exclusive: true }, "分からない"]
+  },
+  {
+    id: "movement_visible_changes",
+    category: "visibleChanges",
+    label: "足や体の見た目",
+    text: "足や体を見て気になることはありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["腫れている", "傷がある", "出血している", "爪が折れている／欠けている", "爪が何かに引っかかっているように見える", "肉球に傷がある", "左右で見た目が違う", "足の向きがいつもと違う", "触ると嫌がる", { label: "見た目には変化がない", value: "見た目には変化がない", exclusive: true }, "確認できない"],
+    notices: {
+      "傷がある": "傷がある場合は、\nねこモヤだけで判断せず、\n動物病院へ相談して今の様子を伝えてください。",
+      "出血している": "出血が見られる場合は、\nねこモヤだけで判断せず、\n動物病院へ相談して今の様子を伝えてください。",
+      "足の向きがいつもと違う": "足の向きがいつもと違う場合は、\nねこモヤだけで判断せず、\n動物病院へ連絡して今の様子を伝えてください。"
+    }
+  },
+  {
+    id: "movement_other_symptoms",
+    category: "otherSymptoms",
+    label: "ほかに気になる様子",
+    text: "ほかに気になる様子はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["元気がない", "食欲が落ちている", "強く鳴く／普段と違う鳴き方", "触られるのを嫌がる", "まっすぐ歩けない／ふらつく", "倒れる", "後ろ足が急に動きにくくなった", "呼吸が苦しそう", "トイレの様子も変わった", { label: "特にない", value: "特にない", exclusive: true }, "分からない"],
+    stopOnValues: ["倒れる", "後ろ足が急に動きにくくなった", "呼吸が苦しそう"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "入力された内容には、動きの変化と一緒に確認したい強いサインが含まれています。\nねこモヤだけで判断せず、\n動物病院へ連絡して今の様子を伝えてください。"
+    }
+  },
+  {
+    id: "movement_recent_events",
+    category: "recentEvents",
+    label: "最近の出来事",
+    text: "最近、きっかけになりそうな出来事はありましたか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["高いところから落ちた可能性", "家具などにぶつかった可能性", "ドアなどに足を挟んだ可能性", "外に出た", "他の動物と接触した", "激しく遊んだ", "最近爪を切った", "家具や床など環境が変わった", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  }
+];
+
+const weightFollowupQuestions = [
+  {
+    id: "weight_changes",
+    category: "weightChanges",
+    label: "気になる変化",
+    text: "どんな変化が気になりますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["体重が減った", "体重が増えた", "痩せたように見える", "太ったように見える", "抱っこすると軽く感じる", "抱っこすると重く感じる", "背骨／腰骨などが以前より目立つ", "お腹まわりが大きくなった", "筋肉が落ちたように見える", "数字は分からないが体型が変わった気がする", "その他", "分からない"]
+  },
+  {
+    id: "weight_started_at",
+    category: "timing",
+    label: "いつから",
+    text: "いつから気になりますか？",
+    type: "single",
+    options: ["今日気づいた", "ここ数日", "1〜2週間くらい", "1か月くらい", "数か月", "以前からだが最近変化が大きくなった", "分からない"]
+  },
+  {
+    id: "weight_measurement",
+    category: "measurement",
+    label: "体重の把握状況",
+    text: "体重は把握できていますか？",
+    type: "single",
+    options: ["最近測っていて数字が分かる", "以前の体重も分かる", "最近は測っていない", "体重は分からない"]
+  },
+  {
+    id: "weight_appetite",
+    category: "appetite",
+    label: "食欲・食べる量",
+    text: "食欲・食べる量はどうですか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: [{ label: "いつもどおり", value: "いつもどおり", exclusive: true }, "食欲が落ちている", "ほとんど食べない", "食欲が増えたように感じる", "食べる量が増えた", "食べる量が減った", "食べたそうだが食べにくそう", "分からない"]
+  },
+  {
+    id: "weight_water_urine",
+    category: "waterUrine",
+    label: "水・おしっこの変化",
+    text: "水・おしっこに変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["水を飲む量が増えたように感じる", "水を飲む量が減ったように感じる", "おしっこの量が増えたように感じる", "おしっこの回数が増えた", "おしっこが減ったように感じる", "何度もトイレに行くのにほとんど出ていない", { label: "いつもどおり", value: "いつもどおり", exclusive: true }, "分からない"],
+    stopOnValues: ["何度もトイレに行くのにほとんど出ていない"],
+    stopResult: {
+      label: "確認を止める目安",
+      title: "🚨 ここでチェックを止めましょう",
+      body: "何度もトイレに行くのに\nおしっこがほとんど出ていない場合は、\nねこモヤだけで判断せず、\n動物病院へ連絡して今の様子を伝えてください。"
+    }
+  },
+  {
+    id: "weight_other_changes",
+    category: "otherChanges",
+    label: "ほかに気になる体の変化",
+    text: "ほかに気になる体の変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["吐いている", "下痢／うんちが変わった", "元気がない", "動く量が減った", "動きにくそう", "毛づやが変わった", "食べ物を口から落とす／食べにくそう", "お腹が以前より大きく見える", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  },
+  {
+    id: "weight_food_changes",
+    category: "foodChanges",
+    label: "食事の変化",
+    text: "最近、食事に変化はありましたか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["フードを変えた", "1回にあげる量を変えた", "食事回数を変えた", "おやつが増えた", "おやつが減った", "ダイエット中", "家族の誰かが別に食べ物をあげている可能性がある", "多頭飼いで、誰がどれだけ食べているか分かりにくい", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  },
+  {
+    id: "weight_lifestyle_changes",
+    category: "lifestyleChanges",
+    label: "生活や活動量の変化",
+    text: "最近の生活や活動量に変化はありますか？",
+    help: "いくつでも選べます。",
+    type: "multiple",
+    options: ["遊ぶ時間が減った", "遊ぶ時間が増えた", "寝ている時間が増えた", "動く量が減った", "外に出る機会が変わった", "引っ越し／部屋の環境が変わった", "新しい猫／動物／家族が増えた", "最近薬を使い始めた", { label: "特にない", value: "特にない", exclusive: true }, "分からない"]
+  }
+];
+
 const answers = {};
 let currentVomitQuestionIndex = 0;
 let currentFlowKey = "vomit";
@@ -1579,6 +1832,59 @@ const symptomFlowConfigs = {
       "最近使用したデンタルケア用品"
     ],
     photoNote: "食べ方がいつもと違う場合は、\n無理のない範囲で食事中の様子を動画に残しておくと、\n動物病院で経過を伝える参考になることがあります。"
+  },
+  skin: {
+    questions: skinFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつ気づいたか",
+      "最初に気づいた場所",
+      "現在気になる場所",
+      "広がっているか",
+      "毛の量",
+      "赤み",
+      "フケ",
+      "かさぶた",
+      "傷",
+      "ベタつき",
+      "ジュクジュク",
+      "におい",
+      "しこり／できものの場所",
+      "大きさの変化",
+      "掻く／舐める／噛む行動",
+      "どのくらい頻繁にするか",
+      "元気",
+      "食欲",
+      "最近変わったもの"
+    ],
+    photoNote: "同じ場所を数日おきに写真に残しておくと、\n広がった・小さくなったなどの変化を\n病院で伝える参考になります。"
+  },
+  movement: {
+    questions: movementFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: [
+      "いつ気づいたか",
+      "突然か、徐々にか",
+      "毎回か、ときどきか",
+      "どの足／どのあたりが気になるか",
+      "どんな動きで変化が出るか",
+      "ジャンプできるか",
+      "階段を使うか",
+      "立ち上がる様子",
+      "トイレの出入り",
+      "腫れや傷があるか",
+      "触ると嫌がるか",
+      "最近の転落やぶつけた可能性",
+      "元気",
+      "食欲"
+    ],
+    photoNote: "可能であれば、\n普通に歩いているところ、横や後ろから歩く様子、\nジャンプ、着地、階段、立ち上がり、トイレの出入りなどを動画に残しておくと、\n動物病院で普段の様子を伝える参考になります。"
+  },
+  weight: {
+    questions: weightFollowupQuestions,
+    summaryMessage: appetiteSummaryKinakoMessage,
+    photoItems: ["現在の体重", "過去に分かる体重", "体重を測った日", "いつ頃から変化を感じたか", "痩せた／太った／体型が変わった", "食欲", "食べる量", "食べ方", "水の飲み方", "おしっこ", "うんち", "吐く", "元気", "活動量", "最近フードを変えたか"],
+    photoNote: "家で安全に量れる場合は、\n同じような条件で体重を記録しておくと、\n変化を伝える参考になります。"
   }
 };
 
@@ -1636,7 +1942,10 @@ function showView(viewId) {
   if (viewId === "vomit-check") {
     resetVomitCheckPage();
   }
-  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
+  if (viewId === "acute-detail") {
+    resetAcutePage();
+  }
+  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "skin-detail", "movement-detail", "weight-detail", "acute-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -1657,7 +1966,7 @@ function resetVomitCheckPage() {
     <h2>選択して「次へ」を押してください。</h2>
     <p>分からない場合は、無理に判断せず近くの動物病院へ相談してください。</p>
   `;
-  getCurrentQuestions().forEach((question) => delete answers[question.id]);
+  getCurrentFlowConfig().questions.forEach((question) => delete answers[question.id]);
 }
 
 function getCurrentFlowConfig() {
@@ -1665,7 +1974,7 @@ function getCurrentFlowConfig() {
 }
 
 function getCurrentQuestions() {
-  return getCurrentFlowConfig().questions;
+  return getCurrentFlowConfig().questions.filter((question) => !question.showWhen || question.showWhen(answers));
 }
 
 function setVomitKinakoMessage(message) {
@@ -1927,7 +2236,7 @@ function renderVomitSummary() {
   const list = document.querySelector("#vomitSummaryList");
   const photoList = document.querySelector("#summaryPhotoList");
   const photoNote = document.querySelector("#summaryPhotoNote");
-  list.innerHTML = flowConfig.questions.filter((question) => !question.skipSummary).map((question) => {
+  list.innerHTML = getCurrentQuestions().filter((question) => !question.skipSummary).map((question) => {
     const values = answers[question.id]?.values || ["未選択"];
     return `
       <div>
@@ -1946,6 +2255,167 @@ function renderVomitSummary() {
   summary.hidden = false;
   summary.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+const acuteStateQuestion = {
+  id: "acute_current_state",
+  label: "今の状態",
+  options: ["はい、今も異変が続いている", "まだ普段どおりに戻っていない", "判断できない", "今は落ち着いている"]
+};
+
+const acuteRecordQuestions = [
+  { id: "acute_event", label: "起きた様子", text: "どんな様子がありましたか？", help: "いくつでも選べます。", type: "multiple", options: ["全身がガクガク／けいれんするように動いた", "体の一部だけピクピクしていた", "急に倒れた", "呼びかけへの反応が弱かった／なかった", "ぼーっとしていた", "ふらついた／まっすぐ歩けなかった", "同じところをぐるぐる回るような動き", "普段と違う行動を突然した", "その他", "よく分からない"] },
+  { id: "acute_timing", label: "起きた時", text: "いつ起こりましたか？", type: "single", options: ["ついさっき", "今日", "昨日", "数日前", "以前にも同じようなことがあった", "分からない"] },
+  { id: "acute_duration", label: "続いた時間", text: "どのくらい続いたか分かりますか？", type: "single", options: ["数秒くらいに見えた", "1〜2分くらいに見えた", "数分続いた", "長く続いたように感じた", "時間を見ていなかった／分からない"] },
+  {
+    id: "acute_afterward", label: "その後の様子", text: "その後、今はどんな様子ですか？", type: "single",
+    options: ["いつもの様子に戻っている", "少しぼーっとしている", "ふらついている", "呼びかけへの反応がいつもと違う", "立てない／歩けない", "また同じような異変が起きた", "呼吸が苦しそう", "分からない"],
+    stopOnValues: ["少しぼーっとしている", "ふらついている", "呼びかけへの反応がいつもと違う", "立てない／歩けない", "また同じような異変が起きた", "呼吸が苦しそう", "分からない"]
+  },
+  {
+    id: "acute_recent_events", label: "思い当たること", text: "最近、気になる出来事はありましたか？", help: "いくつでも選べます。", type: "multiple",
+    options: ["人の薬や、猫用以外の薬を口にした可能性がある", "植物を口にした可能性がある", "洗剤、殺虫剤、薬品などに触れた／口にした可能性がある", "高いところから落ちた可能性がある", "頭をぶつけた可能性がある", "最近薬を使い始めた／変更した", { label: "特に思い当たらない", value: "特に思い当たらない", exclusive: true }, "分からない"],
+    stopOnValues: ["人の薬や、猫用以外の薬を口にした可能性がある", "植物を口にした可能性がある", "洗剤、殺虫剤、薬品などに触れた／口にした可能性がある"]
+  }
+];
+
+const acuteAnswers = {};
+let acuteQuestionIndex = 0;
+
+function resetAcutePage() {
+  acuteQuestionIndex = 0;
+  [acuteStateQuestion, ...acuteRecordQuestions].forEach((question) => delete acuteAnswers[question.id]);
+  const stateForm = document.querySelector("#acuteStateForm");
+  if (stateForm) stateForm.reset();
+  document.querySelector("#acuteStateForm").hidden = false;
+  document.querySelector("#acuteRecordFlow").hidden = true;
+  document.querySelector("#acuteStopResult").hidden = true;
+  document.querySelector("#acuteSummary").hidden = true;
+}
+
+function renderAcuteStateQuestion() {
+  const root = document.querySelector("#acuteStateOptions");
+  if (!root) return;
+  root.innerHTML = acuteStateQuestion.options.map((option) => `<label><input type="radio" name="${acuteStateQuestion.id}" value="${escapeHtml(option)}"> ${escapeHtml(option)}</label>`).join("");
+}
+
+function showAcuteStopResult(body, extra = "") {
+  const result = document.querySelector("#acuteStopResult");
+  document.querySelector("#acuteStateForm").hidden = true;
+  document.querySelector("#acuteRecordFlow").hidden = true;
+  document.querySelector("#acuteSummary").hidden = true;
+  result.hidden = false;
+  result.innerHTML = `<span class="result-label">動物病院への連絡を優先してください</span><h2>今は詳しいチェックを続けず、動物病院へ連絡してください。</h2><p>${escapeHtml(body)}</p>${extra ? `<p>${escapeHtml(extra)}</p>` : ""}`;
+  result.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderAcuteRecordQuestion() {
+  const question = acuteRecordQuestions[acuteQuestionIndex];
+  if (!question) return;
+  const root = document.querySelector("#acuteRecordOptions");
+  const help = document.querySelector("#acuteRecordHelp");
+  const selected = acuteAnswers[question.id]?.values || [];
+  document.querySelector("#acuteRecordTitle").textContent = question.text;
+  help.textContent = question.help || "";
+  help.hidden = !question.help;
+  document.querySelector("#acuteRecordBack").disabled = acuteQuestionIndex === 0;
+  const inputType = question.type === "multiple" ? "checkbox" : "radio";
+  root.innerHTML = question.options.map((rawOption) => {
+    const option = getOptionData(rawOption);
+    return `<label><input type="${inputType}" name="${question.id}" value="${escapeHtml(option.value)}" data-exclusive="${option.exclusive ? "true" : "false"}"${selected.includes(option.value) ? " checked" : ""}> ${escapeHtml(option.label)}</label>`;
+  }).join("");
+  bindAcuteExclusiveOptions(root);
+}
+
+function bindAcuteExclusiveOptions(root) {
+  root.onchange = (event) => {
+    const changed = event.target;
+    if (!(changed instanceof HTMLInputElement) || changed.type !== "checkbox") return;
+    const inputs = [...root.querySelectorAll("input[type='checkbox']")];
+    if (changed.dataset.exclusive === "true" && changed.checked) {
+      inputs.forEach((input) => {
+        if (input !== changed) input.checked = false;
+      });
+      return;
+    }
+    if (changed.checked) {
+      inputs.filter((input) => input.dataset.exclusive === "true").forEach((input) => {
+        input.checked = false;
+      });
+    }
+  };
+}
+
+function saveAcuteRecordAnswer() {
+  const question = acuteRecordQuestions[acuteQuestionIndex];
+  const values = [...document.querySelectorAll(`#acuteRecordOptions input[name="${question.id}"]:checked`)].map((input) => input.value);
+  if (!values.length) {
+    const notice = document.querySelector("#acuteRecordNotice");
+    notice.hidden = false;
+    notice.textContent = "選択してから進んでください。";
+    return false;
+  }
+  acuteAnswers[question.id] = { questionId: question.id, label: question.label, values };
+  return true;
+}
+
+function renderAcuteSummary() {
+  document.querySelector("#acuteRecordFlow").hidden = true;
+  const list = document.querySelector("#acuteSummaryList");
+  list.innerHTML = acuteRecordQuestions.map((question) => {
+    const values = acuteAnswers[question.id]?.values || ["未選択"];
+    return `<div><dt>${escapeHtml(question.label)}</dt><dd>${values.map(escapeHtml).join("・")}</dd></div>`;
+  }).join("");
+  document.querySelector("#acuteSummary").hidden = false;
+  document.querySelector("#acuteSummary").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+renderAcuteStateQuestion();
+
+document.querySelector("#acuteStateForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const selected = document.querySelector("#acuteStateOptions input:checked")?.value;
+  if (!selected) return;
+  acuteAnswers[acuteStateQuestion.id] = { questionId: acuteStateQuestion.id, label: acuteStateQuestion.label, values: [selected] };
+  if (selected !== "今は落ち着いている") {
+    showAcuteStopResult("今起きていること、いつ頃始まったか、今も続いているか、薬・植物・洗剤などを口にした可能性、転落や頭をぶつけた可能性を、伝えられる範囲で動物病院へ伝えてください。");
+    return;
+  }
+  document.querySelector("#acuteStateForm").hidden = true;
+  document.querySelector("#acuteRecordFlow").hidden = false;
+  renderAcuteRecordQuestion();
+});
+
+document.querySelector("#acuteRecordForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!saveAcuteRecordAnswer()) return;
+  const question = acuteRecordQuestions[acuteQuestionIndex];
+  const values = acuteAnswers[question.id].values;
+  if (question.stopOnValues?.some((value) => values.includes(value))) {
+    showAcuteStopResult("今の様子と、ここまでに分かっていることを動物病院へ伝えてください。");
+    return;
+  }
+  if (acuteQuestionIndex < acuteRecordQuestions.length - 1) {
+    acuteQuestionIndex += 1;
+    document.querySelector("#acuteRecordNotice").hidden = true;
+    renderAcuteRecordQuestion();
+    return;
+  }
+  renderAcuteSummary();
+});
+
+document.querySelector("#acuteRecordBack")?.addEventListener("click", () => {
+  saveAcuteRecordAnswer();
+  if (acuteQuestionIndex > 0) {
+    acuteQuestionIndex -= 1;
+    document.querySelector("#acuteRecordNotice").hidden = true;
+    renderAcuteRecordQuestion();
+  }
+});
+
+document.querySelector("#acuteMemoComingSoon")?.addEventListener("click", () => {
+  const status = document.querySelector("#acuteMemoStatus");
+  status.hidden = false;
+});
 
 document.querySelector("#memoComingSoon")?.addEventListener("click", () => {
   const status = document.querySelector("#memoComingSoonStatus");
