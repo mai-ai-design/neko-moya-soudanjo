@@ -205,16 +205,6 @@ p {
   background: #704f3d;
 }
 
-.hero-btn-check {
-  background: #e9b48c;
-  border: 1px solid #d99a6c;
-  color: #5c5048;
-}
-
-.hero-btn-check:hover {
-  background: #d8a37b;
-}
-
 .hero-btn-chat {
   background: #f6c8d2;
   border: 1.5px solid #e8a8bc;
@@ -236,13 +226,13 @@ p {
 }
 
 .hero-btn-life {
-  background: #fff7ef;
+  background: #f3e4d5;
   border: 1.5px solid #e0d2c0;
   color: #5c5048;
 }
 
 .hero-btn-life:hover {
-  background: #eee7de;
+  background: #e3d5c7;
 }
 
 .primary-btn:hover,
