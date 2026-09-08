@@ -943,8 +943,7 @@ textarea {
   left: 50%;
   bottom: 10px;
   z-index: 10;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
   width: min(calc(100% - 20px), 560px);
   transform: translateX(-50%);
   border: 1px solid var(--line);
@@ -970,6 +969,8 @@ textarea {
 }
 
 .bottom-nav button {
+  flex: 1;
+  min-width: 0;
   display: grid;
   place-items: center;
   gap: 2px;
