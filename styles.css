@@ -968,8 +968,8 @@ textarea {
 }
 
 .hospital-memo-title-icon {
-  width: 34px;
-  height: 34px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
   flex: 0 0 auto;
 }
@@ -1043,6 +1043,13 @@ textarea {
   .hospital-memo-output .hospital-memo-detail-list div {
     grid-template-columns: minmax(134px, 190px) minmax(0, 1fr);
     column-gap: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hospital-memo-title-icon {
+    width: 24px;
+    height: 24px;
   }
 }
 
