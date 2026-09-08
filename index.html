@@ -1663,8 +1663,7 @@
             <p>同じような異変がまた起きた場合や、<br>普段どおりに戻らない場合は、<br>詳しいチェックを続けるより<br>動物病院へ連絡してください。</p>
             <section aria-labelledby="acute-summary-title"><h3 id="acute-summary-title">起きたこと</h3><dl id="acuteSummaryList" class="summary-list"></dl></section>
             <div class="notice-card summary-note"><p>この内容だけで病気や受診の必要性を診断するものではありません。症状が続く・悪化する・普段と明らかに違う、または飼い主さんが不安を感じる場合は、動物病院へ相談してください。</p></div>
-            <button class="secondary-btn" id="acuteMemoComingSoon" type="button">📋 病院メモを作る</button>
-            <p id="acuteMemoStatus" class="coming-soon-note" hidden>病院メモ機能は準備中です。次回実装予定です。</p>
+            <button class="secondary-btn" id="acuteMemoCreate" type="button">📋 病院メモを作る</button>
           </div>
         </section>
 
@@ -1746,8 +1745,7 @@
                 症状が続く・悪化する・普段と明らかに違う、または飼い主さんが不安を感じる場合は、動物病院へ相談してください。
               </p>
             </div>
-            <button class="secondary-btn" id="memoComingSoon" type="button">📋 病院メモを作る</button>
-            <p id="memoComingSoonStatus" class="coming-soon-note" hidden>病院メモ機能は準備中です。次回実装予定です。</p>
+            <button class="secondary-btn" id="hospitalMemoCreate" type="button">📋 病院メモを作る</button>
           </div>
         </section>
 
@@ -1840,10 +1838,50 @@
             <p>いつから、何が、どのくらい起きているかを整理できます。</p>
           </div>
           <form id="memoForm" class="form-card two-column"></form>
-          <div id="memoOutput" class="memo-output">
-            <h2>病院で見せるメモ</h2>
-            <p>入力すると、ここにメモ形式でまとまります。</p>
+        </section>
+
+        <section id="hospital-memo-editor" class="view" aria-labelledby="hospital-memo-editor-title">
+          <div class="page-heading">
+            <p class="eyebrow">病院メモ</p>
+            <h1 id="hospital-memo-editor-title">病院で見せる内容を整えましょう</h1>
+            <p>内容を確認して、必要なところだけ書き足せます。</p>
           </div>
+          <form id="hospitalMemoForm" class="form-card">
+            <fieldset>
+              <legend>猫の基本情報</legend>
+              <div class="two-column hospital-basic-fields">
+                <label>名前<input id="hospitalName" name="name" type="text"></label>
+                <label>猫種<input id="hospitalBreed" name="breed" type="text"></label>
+                <label>性別<input id="hospitalSex" name="sex" type="text"></label>
+                <label>生年月日<input id="hospitalBirthdate" name="birthdate" type="date"><small id="hospitalAgePreview" class="hospital-age-preview" aria-live="polite" hidden></small></label>
+                <label>推定年齢<input id="hospitalEstimatedAge" name="estimatedAge" type="text" placeholder="例：8歳"></label>
+                <label>現在の体重<input id="hospitalWeight" name="weight" type="text" placeholder="例：4.2kg"></label>
+                <label>体温<input id="hospitalTemperature" name="temperature" type="text" placeholder="例：38.5℃"></label>
+                <label>持病<textarea id="hospitalConditions" name="conditions" rows="3"></textarea></label>
+                <label class="wide">現在使用している薬<textarea id="hospitalMedicines" name="medicines" rows="3"></textarea></label>
+              </div>
+            </fieldset>
+
+            <div id="hospitalMemoSymptomFields"></div>
+
+            <fieldset>
+              <legend>追加情報</legend>
+              <label>追加で伝えたいこと<textarea id="hospitalAdditional" name="additional" rows="4"></textarea></label>
+              <label>獣医さんに聞きたいこと<textarea id="hospitalQuestions" name="questions" rows="4"></textarea></label>
+            </fieldset>
+
+            <p id="hospitalMemoCreatedAt" class="hospital-created-at"></p>
+            <button class="primary-btn" type="submit">病院で見せるメモを表示する</button>
+          </form>
+        </section>
+
+        <section id="hospital-memo-display" class="view" aria-labelledby="hospital-memo-display-title">
+          <div class="page-heading">
+            <p class="eyebrow">病院メモ</p>
+            <h1 id="hospital-memo-display-title"><img class="hospital-memo-title-icon" src="assets/kinako.png" alt="きなこ">病院で見せるメモ</h1>
+          </div>
+          <article id="hospitalMemoOutput" class="hospital-memo-output" aria-live="polite"></article>
+          <button id="hospitalMemoEdit" class="secondary-btn" type="button">編集する</button>
         </section>
       </main>
 

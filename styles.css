@@ -254,7 +254,8 @@ p {
 .form-card,
 .result-card,
 .chat-panel,
-.memo-output {
+.memo-output,
+.hospital-memo-output {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.92);
@@ -936,6 +937,113 @@ textarea {
 .memo-output dd {
   margin: 3px 0 0;
   white-space: pre-wrap;
+}
+
+.hospital-basic-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.hospital-created-at {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hospital-age-preview {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+#hospital-memo-editor-title {
+  max-width: none;
+}
+
+#hospital-memo-display-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: none;
+}
+
+.hospital-memo-title-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.hospital-memo-output {
+  display: grid;
+  gap: 20px;
+  margin-top: 16px;
+  padding: 20px;
+  background: #fffdf8;
+}
+
+.hospital-memo-output h3 {
+  color: var(--brown-strong);
+}
+
+.hospital-memo-output section {
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.hospital-memo-output section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.hospital-memo-output h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.hospital-memo-output dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.hospital-memo-output dl div {
+  display: grid;
+  gap: 1px;
+  padding: 3px 0;
+}
+
+.hospital-memo-output dt {
+  color: var(--brown);
+  font-weight: 700;
+}
+
+.hospital-memo-output dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+#hospitalMemoEdit {
+  width: 100%;
+  margin-top: 12px;
+}
+
+@media (min-width: 640px) {
+  #hospital-memo-editor-title {
+    white-space: nowrap;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+  }
+
+  .hospital-memo-output .hospital-memo-basic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+    row-gap: 4px;
+  }
+
+  .hospital-memo-output .hospital-memo-detail-list div {
+    grid-template-columns: minmax(134px, 190px) minmax(0, 1fr);
+    column-gap: 16px;
+  }
 }
 
 .bottom-nav {

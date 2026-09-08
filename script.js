@@ -1944,7 +1944,9 @@ function showView(viewId) {
   if (viewId === "acute-detail") {
     resetAcutePage();
   }
-  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "skin-detail", "movement-detail", "weight-detail", "acute-detail", "vomit-check"].includes(viewId) ? "symptoms" : viewId;
+  const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "skin-detail", "movement-detail", "weight-detail", "acute-detail", "vomit-check"].includes(viewId)
+    ? "symptoms"
+    : ["hospital-memo-editor", "hospital-memo-display"].includes(viewId) ? "memo" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -2411,15 +2413,12 @@ document.querySelector("#acuteRecordBack")?.addEventListener("click", () => {
   }
 });
 
-document.querySelector("#acuteMemoComingSoon")?.addEventListener("click", () => {
-  const status = document.querySelector("#acuteMemoStatus");
-  status.hidden = false;
+document.querySelector("#acuteMemoCreate")?.addEventListener("click", () => {
+  startHospitalMemoFromAcute();
 });
 
-document.querySelector("#memoComingSoon")?.addEventListener("click", () => {
-  const status = document.querySelector("#memoComingSoonStatus");
-  status.hidden = false;
-  status.textContent = "病院メモ機能は準備中です。次回実装予定です。";
+document.querySelector("#hospitalMemoCreate")?.addEventListener("click", () => {
+  startHospitalMemoFromFlow(currentFlowKey);
 });
 
 document.querySelector("#triageForm").addEventListener("submit", (event) => {
@@ -2484,7 +2483,7 @@ document.querySelector("#profileForm").addEventListener("submit", (event) => {
 
 document.querySelector("#memoForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  renderOutput("#memoOutput", "病院で見せるメモ", memoFields, event.currentTarget);
+  startHospitalMemoFromManual(event.currentTarget);
 });
 
 function renderOutput(target, title, fields, form) {
@@ -2495,6 +2494,177 @@ function renderOutput(target, title, fields, form) {
   }).join("");
   document.querySelector(target).innerHTML = `<h2>${title}</h2><dl>${rows}</dl>`;
 }
+
+const hospitalMemoMappings = {
+  vomit: [["今回の相談", [["vomit_started_at", "いつから"], ["vomit_count", "吐いた回数・頻度"]]], ["吐いたときの様子", [["vomit_content", "吐いたもの"], ["meal_timing", "食事とのタイミング"]]], ["今の全身の様子", [["appetite_now", "食欲"], ["water_change", "水分"], ["energy_now", "元気"], ["toilet_change", "うんち・おしっこ"]]]],
+  appetite: [["今回の相談", [["appetite_started_at", "いつから"]]], ["食欲・食べ方", [["appetite_eating_style", "食欲の変化"], ["appetite_amount", "食べた量"], ["appetite_eating_behavior", "食べるときの様子"]]], ["今の全身の様子", [["appetite_water_change", "水分"], ["appetite_energy_now", "元気"]]], ["その他", [["appetite_other_changes", "ほかに気になる様子"], ["appetite_recent_changes", "最近の変化"]]]],
+  poop: [["今回の相談", [["poop_started_at", "いつから"], ["poop_count", "回数"]]], ["うんちの様子", [["poop_state", "便の状態"], ["poop_color_mixture", "色・混ざっているもの"], ["poop_toilet_behavior", "トイレでの様子"]]], ["今の全身の様子", [["poop_appetite", "食欲"], ["poop_water", "水分"], ["poop_other_symptoms", "ほかに気になる様子"]]], ["その他", [["poop_recent_changes", "最近の変化"]]]],
+  urine: [["今回の相談", [["urine_started_at", "いつから"], ["urine_output", "尿が出ているか"]]], ["おしっこの様子", [["urine_toilet_count", "トイレの回数"], ["urine_amount", "1回の量"], ["urine_appearance", "色・見た目"], ["urine_behavior", "トイレでの様子"]]], ["今の全身の様子", [["urine_water", "水分"], ["urine_other_symptoms", "ほかに気になる様子"]]], ["その他", [["urine_recent_changes", "最近の変化"]]]],
+  water: [["今回の相談", [["water_started_at", "いつから"], ["water_drinking_change", "水分の変化"]]], ["水の飲み方", [["water_drinking_style", "飲み方・頻度"], ["water_food_type", "普段のごはん"]]], ["食事・トイレ・体の変化", [["water_urine_change", "おしっこ"], ["water_appetite", "食欲"], ["water_body_change", "体重・体型"]]], ["その他", [["water_other_symptoms", "ほかに気になる様子"], ["water_recent_changes", "最近の変化"]]]],
+  energy: [["今回の相談", [["energy_started_at", "いつから"], ["energy_main_changes", "一番気になる変化"]]], ["普段との様子の違い", [["energy_movement", "動き方"], ["energy_touch_behavior", "触ったときの様子"]]], ["食事・水・トイレ", [["energy_appetite", "食欲・食べ方"], ["energy_water_toilet", "水分・トイレ"]]], ["その他", [["energy_other_symptoms", "ほかに気になる様子"], ["energy_recent_changes", "最近の変化"]]]],
+  breathing: [["今回の相談", [["breathing_started_at", "いつから"], ["breathing_main_changes", "一番気になる様子"], ["breathing_frequency", "頻度"]]], ["呼吸・鼻・目の様子", [["breathing_nose_eyes", "鼻・目の様子"]]], ["今の全身の様子", [["breathing_appetite_energy", "食欲・元気"], ["breathing_other_changes", "ほかに気になる様子"]]], ["その他", [["breathing_recent_changes", "最近の変化"]]]],
+  eye: [["今回の相談", [["eye_side", "気になる目"], ["eye_changes", "一番気になる変化"]]], ["目の様子", [["eye_discharge_tears", "目やに・涙"], ["eye_appearance", "見た目・左右差"]]], ["行動・全身の様子", [["eye_behavior", "見え方に関係しそうな行動"], ["eye_other_symptoms", "ほかに気になる様子"]]], ["その他", [["eye_recent_changes", "最近の出来事・変化"]]]],
+  ear: [["今回の相談", [["ear_side", "気になる耳"], ["ear_changes", "一番気になる変化"]]], ["耳の様子", [["ear_wax", "耳垢"], ["ear_smell_appearance", "におい・見た目"]]], ["行動・全身の様子", [["ear_behavior", "耳を気にする様子"], ["ear_other_symptoms", "ほかに気になる様子"]]], ["その他", [["ear_recent_changes", "最近の出来事・変化"]]]],
+  mouth: [["今回の相談", [["mouth_started_at", "いつから"], ["mouth_changes", "一番気になる変化"]]], ["食べるときの様子", [["mouth_trying_to_eat", "食べようとする様子"], ["mouth_eating_behavior", "実際の食べ方"]]], ["口・顔の様子", [["mouth_visible_changes", "口の中・よだれ"], ["mouth_face_behavior", "口や顔を気にする様子"]]], ["その他", [["mouth_care_recent", "最近の出来事・変化"]]]],
+  skin: [["今回の相談", [["skin_locations", "気になる場所"], ["skin_started_at", "いつから"]]], ["皮膚・毛の様子", [["skin_appearance", "見た目の変化"], ["skin_change", "その後の変化"], ["skin_lump", "しこり・できもの"], ["skin_lump_details", "しこりの様子"]]], ["猫の様子", [["skin_behavior", "気にしている様子"], ["skin_other_symptoms", "ほかに気になる様子"]]], ["その他", [["skin_recent_changes", "最近の変化"]]]],
+  movement: [["今回の相談", [["movement_location", "気になる場所"], ["movement_started_at", "いつから"], ["movement_concern", "一番気になる動き"]]], ["動くときの様子", [["movement_walking", "立つ・歩く様子"], ["movement_situations", "気になる場面"]]], ["足・体の見た目", [["movement_visible_changes", "見た目の変化"]]], ["その他", [["movement_other_symptoms", "ほかに気になる様子"], ["movement_recent_events", "最近の出来事"]]]],
+  weight: [["今回の相談", [["weight_started_at", "いつから"], ["weight_changes", "気になる変化"], ["weight_measurement", "最近の体重"]]], ["食事・水・トイレ", [["weight_appetite", "食欲・食べる量"], ["weight_water_urine", "水分・おしっこ"]]], ["体・暮らしの変化", [["weight_other_changes", "ほかの体の変化"], ["weight_food_changes", "ごはんの状況"], ["weight_lifestyle_changes", "活動量・暮らしの変化"]]]]
+};
+
+const acuteHospitalMemoMapping = [
+  ["急な異変の記録", [["acute_event", "起きたこと"], ["acute_timing", "起きた時期"], ["acute_duration", "続いた時間"]]],
+  ["その後の様子", [["acute_afterward", "現在の様子"]]],
+  ["最近の出来事", [["acute_recent_events", "気になる出来事"]]]
+];
+
+const hospitalMemoState = {
+  source: "",
+  createdAt: "",
+  basic: {},
+  groups: [],
+  additional: "",
+  questions: ""
+};
+
+function createHospitalMemoGroups(mapping, sourceAnswers) {
+  return mapping.map(([title, fields]) => ({
+    title,
+    entries: fields.map(([questionId, label]) => {
+      const values = sourceAnswers[questionId]?.values;
+      return values?.length ? { label, value: values.join("／") } : null;
+    }).filter(Boolean)
+  })).filter((group) => group.entries.length);
+}
+
+function formatHospitalMemoDate(date) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"
+  }).format(date);
+}
+
+function startHospitalMemo(source, groups, questions = "") {
+  hospitalMemoState.source = source;
+  hospitalMemoState.createdAt = formatHospitalMemoDate(new Date());
+  hospitalMemoState.basic = {};
+  hospitalMemoState.groups = groups;
+  hospitalMemoState.additional = "";
+  hospitalMemoState.questions = questions;
+  renderHospitalMemoEditor();
+  showView("hospital-memo-editor");
+}
+
+function startHospitalMemoFromFlow(flowKey) {
+  const mapping = hospitalMemoMappings[flowKey];
+  if (!mapping) return;
+  startHospitalMemo("flow", createHospitalMemoGroups(mapping, answers));
+}
+
+function startHospitalMemoFromAcute() {
+  startHospitalMemo("acute", createHospitalMemoGroups(acuteHospitalMemoMapping, acuteAnswers));
+}
+
+function startHospitalMemoFromManual(form) {
+  const data = new FormData(form);
+  const entries = memoFields
+    .filter(([id]) => id !== "question")
+    .map(([id, label]) => ({ label, value: data.get(id)?.trim() || "" }))
+    .filter((entry) => entry.value);
+  const groups = entries.length ? [{ title: "今回の症状・相談内容", entries }] : [];
+  startHospitalMemo("manual", groups, data.get("question")?.trim() || "");
+}
+
+function renderHospitalMemoEditor() {
+  const form = document.querySelector("#hospitalMemoForm");
+  if (!form) return;
+  const basic = hospitalMemoState.basic;
+  ["name", "breed", "sex", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "medicines"].forEach((key) => {
+    const input = form.elements[key];
+    if (input) input.value = basic[key] || "";
+  });
+  form.elements.additional.value = hospitalMemoState.additional;
+  form.elements.questions.value = hospitalMemoState.questions;
+  document.querySelector("#hospitalMemoCreatedAt").textContent = `作成日時：${hospitalMemoState.createdAt}`;
+  updateHospitalAgePreview();
+  const root = document.querySelector("#hospitalMemoSymptomFields");
+  root.innerHTML = hospitalMemoState.groups.map((group, groupIndex) => `
+    <fieldset>
+      <legend>${escapeHtml(group.title)}</legend>
+      ${group.entries.map((entry, entryIndex) => `<label>${escapeHtml(entry.label)}<textarea name="symptom-${groupIndex}-${entryIndex}" rows="3">${escapeHtml(entry.value)}</textarea></label>`).join("")}
+    </fieldset>
+  `).join("");
+}
+
+function getHospitalMemoAge(basic) {
+  if (basic.birthdate) {
+    const birthdate = new Date(`${basic.birthdate}T00:00:00`);
+    const today = new Date();
+    if (!Number.isNaN(birthdate.getTime()) && birthdate <= today) {
+      let months = (today.getFullYear() - birthdate.getFullYear()) * 12 + today.getMonth() - birthdate.getMonth();
+      if (today.getDate() < birthdate.getDate()) months -= 1;
+      if (months >= 0) return `${Math.floor(months / 12)}歳${months % 12}か月`;
+    }
+  }
+  if (basic.estimatedAge) return basic.estimatedAge.startsWith("推定") ? basic.estimatedAge : `推定${basic.estimatedAge}`;
+  return "";
+}
+
+function updateHospitalAgePreview() {
+  const preview = document.querySelector("#hospitalAgePreview");
+  const birthdate = document.querySelector("#hospitalBirthdate")?.value || "";
+  const age = getHospitalMemoAge({ birthdate });
+  preview.hidden = !age;
+  preview.textContent = age ? `現在：${age}` : "";
+}
+
+function formatHospitalMemoUnit(value, unit) {
+  if (!value) return "";
+  const hasUnit = unit === "kg" ? /kg/i.test(value) : /℃|°\s*c/i.test(value);
+  return hasUnit ? value : `${value}${unit}`;
+}
+
+function renderHospitalMemoDisplay() {
+  const root = document.querySelector("#hospitalMemoOutput");
+  const basic = hospitalMemoState.basic;
+  const basicEntries = [
+    ["名前", basic.name], ["猫種", basic.breed], ["性別", basic.sex], ["年齢", getHospitalMemoAge(basic)],
+    ["体重", formatHospitalMemoUnit(basic.weight, "kg")], ["体温", formatHospitalMemoUnit(basic.temperature, "℃")], ["持病", basic.conditions], ["服薬", basic.medicines]
+  ].filter(([, value]) => value);
+  const renderEntries = (entries, className = "") => `<dl class="${className}">${entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>`;
+  const groups = hospitalMemoState.groups.map((group) => `
+    <section><h3>${escapeHtml(group.title)}</h3>${renderEntries(group.entries.map((entry) => [entry.label, entry.value]).filter(([, value]) => value), "hospital-memo-detail-list")}</section>
+  `).join("");
+  const extras = [["追加で伝えたいこと", hospitalMemoState.additional], ["獣医さんに聞きたいこと", hospitalMemoState.questions]].filter(([, value]) => value);
+  root.innerHTML = `
+    ${basicEntries.length ? `<section><h3>猫の情報</h3>${renderEntries(basicEntries, "hospital-memo-basic-grid")}</section>` : ""}
+    ${groups}
+    ${extras.length ? `<section><h3>追加情報</h3>${renderEntries(extras, "hospital-memo-detail-list")}</section>` : ""}
+    <p class="hospital-created-at">作成日時：${escapeHtml(hospitalMemoState.createdAt)}</p>
+  `;
+}
+
+document.querySelector("#hospitalMemoForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  hospitalMemoState.basic = Object.fromEntries(["name", "breed", "sex", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "medicines"].map((key) => [key, data.get(key)?.trim() || ""]));
+  hospitalMemoState.groups.forEach((group, groupIndex) => {
+    group.entries.forEach((entry, entryIndex) => {
+      entry.value = data.get(`symptom-${groupIndex}-${entryIndex}`)?.trim() || "";
+    });
+  });
+  hospitalMemoState.additional = data.get("additional")?.trim() || "";
+  hospitalMemoState.questions = data.get("questions")?.trim() || "";
+  renderHospitalMemoDisplay();
+  showView("hospital-memo-display");
+});
+
+document.querySelector("#hospitalBirthdate")?.addEventListener("input", updateHospitalAgePreview);
+document.querySelector("#hospitalBirthdate")?.addEventListener("change", updateHospitalAgePreview);
+
+document.querySelector("#hospitalMemoEdit")?.addEventListener("click", () => {
+  renderHospitalMemoEditor();
+  showView("hospital-memo-editor");
+});
 
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
