@@ -140,7 +140,6 @@ const memoFields = [
   ["water", "水を飲む量", "text"],
   ["toilet", "トイレの様子", "textarea", "wide"],
   ["energy", "元気の有無", "text"],
-  ["media", "写真・動画メモ", "textarea", "wide"],
   ["change", "気になる変化", "textarea", "wide"],
   ["question", "獣医さんに聞きたいこと", "textarea", "wide"]
 ];

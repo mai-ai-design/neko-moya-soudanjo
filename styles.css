@@ -276,6 +276,29 @@ p {
   background: #fff9f4;
 }
 
+.memo-shortcut-card {
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.memo-shortcut-card .kinako-avatar {
+  width: 56px;
+  height: 56px;
+}
+
+.memo-shortcut-card .kinako-speech {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.memo-shortcut-btn {
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 0.86rem;
+}
+
 .kinako-avatar {
   display: block;
   width: 64px;
