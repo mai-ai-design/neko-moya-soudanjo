@@ -944,7 +944,7 @@ textarea {
   bottom: 10px;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   width: min(calc(100% - 20px), 560px);
   transform: translateX(-50%);
   border: 1px solid var(--line);
