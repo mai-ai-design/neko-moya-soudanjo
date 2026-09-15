@@ -1935,22 +1935,27 @@ document.querySelectorAll(".nav-link").forEach((button) => {
 });
 
 function showView(viewId) {
-  document.querySelectorAll(".view").forEach((view) => {
-    view.classList.toggle("is-active", view.id === viewId);
-  });
   if (viewId === "vomit-check") {
     resetVomitCheckPage();
   }
   if (viewId === "acute-detail") {
     resetAcutePage();
   }
+  setActiveView(viewId);
+  saveAppState();
+}
+
+function setActiveView(viewId, { scroll = true } = {}) {
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("is-active", view.id === viewId);
+  });
   const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "skin-detail", "movement-detail", "weight-detail", "acute-detail", "vomit-check"].includes(viewId)
     ? "symptoms"
     : ["hospital-memo-editor", "hospital-memo-display"].includes(viewId) ? "memo" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function resetVomitCheckPage() {
@@ -2050,6 +2055,7 @@ document.querySelector("#dangerSignForm")?.addEventListener("submit", (event) =>
       <h2>当てはまるものを選んでください。</h2>
       <p>分からない場合は「どれも当てはまらない」を選んでください。</p>
     `;
+    saveAppState();
     return;
   }
 
@@ -2059,10 +2065,12 @@ document.querySelector("#dangerSignForm")?.addEventListener("submit", (event) =>
       title: "チェックをいったんここで止めましょう",
       body: "入力された内容には、緊急性のある状態で見られるサインが含まれています。ねこモヤだけで判断せず、動物病院へ連絡して状況を伝えてください。"
     });
+    saveAppState();
     return;
   }
 
   startVomitQuestionFlow();
+  saveAppState();
 });
 
 function startVomitQuestionFlow() {
@@ -2209,16 +2217,19 @@ document.querySelector("#vomitQuestionForm")?.addEventListener("submit", (event)
       ...question.stopResult,
       body: appendMessage ? `${question.stopResult.body}\n\n${appendMessage}` : question.stopResult.body
     });
+    saveAppState();
     return;
   }
 
   if (currentVomitQuestionIndex < getCurrentQuestions().length - 1) {
     currentVomitQuestionIndex += 1;
     renderVomitQuestion();
+    saveAppState();
     return;
   }
 
   renderVomitSummary();
+  saveAppState();
 });
 
 document.querySelector("#vomitQuestionBack")?.addEventListener("click", () => {
@@ -2227,6 +2238,7 @@ document.querySelector("#vomitQuestionBack")?.addEventListener("click", () => {
     currentVomitQuestionIndex -= 1;
     renderVomitQuestion();
   }
+  saveAppState();
 });
 
 function renderVomitSummary() {
@@ -2379,11 +2391,13 @@ document.querySelector("#acuteStateForm")?.addEventListener("submit", (event) =>
   acuteAnswers[acuteStateQuestion.id] = { questionId: acuteStateQuestion.id, label: acuteStateQuestion.label, values: [selected] };
   if (selected !== "今は落ち着いている") {
     showAcuteStopResult("今起きていること、いつ頃始まったか、今も続いているか、薬・植物・洗剤などを口にした可能性、転落や頭をぶつけた可能性を、伝えられる範囲で動物病院へ伝えてください。");
+    saveAppState();
     return;
   }
   document.querySelector("#acuteStateForm").hidden = true;
   document.querySelector("#acuteRecordFlow").hidden = false;
   renderAcuteRecordQuestion();
+  saveAppState();
 });
 
 document.querySelector("#acuteRecordForm")?.addEventListener("submit", (event) => {
@@ -2393,15 +2407,18 @@ document.querySelector("#acuteRecordForm")?.addEventListener("submit", (event) =
   const values = acuteAnswers[question.id].values;
   if (question.stopOnValues?.some((value) => values.includes(value))) {
     showAcuteStopResult("今の様子と、ここまでに分かっていることを動物病院へ伝えてください。");
+    saveAppState();
     return;
   }
   if (acuteQuestionIndex < acuteRecordQuestions.length - 1) {
     acuteQuestionIndex += 1;
     document.querySelector("#acuteRecordNotice").hidden = true;
     renderAcuteRecordQuestion();
+    saveAppState();
     return;
   }
   renderAcuteSummary();
+  saveAppState();
 });
 
 document.querySelector("#acuteRecordBack")?.addEventListener("click", () => {
@@ -2411,6 +2428,7 @@ document.querySelector("#acuteRecordBack")?.addEventListener("click", () => {
     document.querySelector("#acuteRecordNotice").hidden = true;
     renderAcuteRecordQuestion();
   }
+  saveAppState();
 });
 
 document.querySelector("#acuteMemoCreate")?.addEventListener("click", () => {
@@ -2734,3 +2752,311 @@ function escapeHtml(value) {
     "'": "&#039;"
   })[char]);
 }
+
+const APP_STATE_STORAGE_KEY = "nekomoya_session_state";
+const PENDING_ACTION_STORAGE_KEY = "nekomoya_pending_action";
+const APP_STATE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+const HOSPITAL_MEMO_BASIC_FIELDS = ["name", "breed", "sex", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "medicines", "additional", "questions"];
+let appStateSaveTimer;
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function getActiveViewId() {
+  return document.querySelector(".view.is-active")?.id || "home";
+}
+
+function getGenericFlowStage() {
+  if (!document.querySelector("#vomitQuestionFlow").hidden) return "question";
+  if (!document.querySelector("#vomitSummary").hidden) return "summary";
+  if (document.querySelector("#dangerSignForm").hidden && !document.querySelector("#dangerResult").hidden) return "stop";
+  return "danger";
+}
+
+function getAcuteFlowStage() {
+  if (!document.querySelector("#acuteRecordFlow").hidden) return "record";
+  if (!document.querySelector("#acuteSummary").hidden) return "summary";
+  if (!document.querySelector("#acuteStopResult").hidden) return "stop";
+  return "state";
+}
+
+function getNamedFormValues(form, names) {
+  if (!form) return {};
+  return names.reduce((values, name) => {
+    const field = form.elements.namedItem(name);
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+      values[name] = field.value;
+    }
+    return values;
+  }, {});
+}
+
+function getHospitalMemoFormValues() {
+  const form = document.querySelector("#hospitalMemoForm");
+  const values = getNamedFormValues(form, HOSPITAL_MEMO_BASIC_FIELDS);
+  form?.querySelectorAll('textarea[name^="symptom-"]').forEach((field) => {
+    values[field.name] = field.value;
+  });
+  return values;
+}
+
+function getFormDrafts() {
+  return {
+    memo: getNamedFormValues(document.querySelector("#memoForm"), memoFields.map(([id]) => id)),
+    hospitalMemo: getHospitalMemoFormValues()
+  };
+}
+
+function applyFormValues(form, values) {
+  if (!form || !isPlainObject(values)) return;
+  Object.entries(values).forEach(([name, value]) => {
+    const field = form.elements.namedItem(name);
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+      field.value = typeof value === "string" ? value : "";
+    }
+  });
+}
+
+function cloneState(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function replaceObjectContents(target, source) {
+  Object.keys(target).forEach((key) => delete target[key]);
+  Object.assign(target, source);
+}
+
+function getFlowSnapshot() {
+  return {
+    genericStage: getGenericFlowStage(),
+    genericResult: {
+      className: document.querySelector("#dangerResult")?.className || "result-card",
+      html: document.querySelector("#dangerResult")?.innerHTML || ""
+    },
+    acuteStage: getAcuteFlowStage(),
+    acuteResultHtml: document.querySelector("#acuteStopResult")?.innerHTML || ""
+  };
+}
+
+function saveAppState() {
+  try {
+    const state = {
+      answers: cloneState(answers),
+      acuteAnswers: cloneState(acuteAnswers),
+      currentFlowKey,
+      currentVomitQuestionIndex,
+      acuteQuestionIndex,
+      hospitalMemoState: cloneState(hospitalMemoState),
+      forms: getFormDrafts(),
+      activeView: getActiveViewId(),
+      flow: getFlowSnapshot(),
+      savedAt: Date.now()
+    };
+    sessionStorage.setItem(APP_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    // Storage can be unavailable in privacy-restricted browser contexts.
+  }
+}
+
+function clearAppState() {
+  try {
+    sessionStorage.removeItem(APP_STATE_STORAGE_KEY);
+  } catch (error) {
+    // Nothing else is required when browser storage is unavailable.
+  }
+}
+
+function setPendingAction(action) {
+  try {
+    sessionStorage.setItem(PENDING_ACTION_STORAGE_KEY, JSON.stringify(action));
+  } catch (error) {
+    // Pending actions are optional while browser storage is unavailable.
+  }
+}
+
+function getPendingAction() {
+  try {
+    const value = sessionStorage.getItem(PENDING_ACTION_STORAGE_KEY);
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    clearPendingAction();
+    return null;
+  }
+}
+
+function clearPendingAction() {
+  try {
+    sessionStorage.removeItem(PENDING_ACTION_STORAGE_KEY);
+  } catch (error) {
+    // Nothing else is required when browser storage is unavailable.
+  }
+}
+
+function isValidAppState(state) {
+  return isPlainObject(state)
+    && isPlainObject(state.answers)
+    && isPlainObject(state.acuteAnswers)
+    && typeof state.currentFlowKey === "string"
+    && Number.isInteger(state.currentVomitQuestionIndex)
+    && state.currentVomitQuestionIndex >= 0
+    && Number.isInteger(state.acuteQuestionIndex)
+    && state.acuteQuestionIndex >= 0
+    && isPlainObject(state.hospitalMemoState)
+    && isPlainObject(state.hospitalMemoState.basic)
+    && Array.isArray(state.hospitalMemoState.groups)
+    && isPlainObject(state.forms)
+    && typeof state.activeView === "string"
+    && isPlainObject(state.flow)
+    && typeof state.savedAt === "number"
+    && Date.now() - state.savedAt <= APP_STATE_MAX_AGE_MS;
+}
+
+function restoreGenericFlow(flow) {
+  const questions = getCurrentQuestions();
+  currentVomitQuestionIndex = Math.min(currentVomitQuestionIndex, Math.max(questions.length - 1, 0));
+  const dangerForm = document.querySelector("#dangerSignForm");
+  const dangerResult = document.querySelector("#dangerResult");
+  const questionFlow = document.querySelector("#vomitQuestionFlow");
+  const summary = document.querySelector("#vomitSummary");
+  const stage = flow.genericStage;
+
+  if (stage === "question") {
+    dangerForm.hidden = true;
+    dangerResult.hidden = true;
+    summary.hidden = true;
+    questionFlow.hidden = false;
+    setVomitKinakoMessage(vomitQuestionKinakoMessage);
+    renderVomitQuestion();
+    return;
+  }
+
+  if (stage === "summary") {
+    dangerForm.hidden = true;
+    dangerResult.hidden = true;
+    questionFlow.hidden = true;
+    renderVomitSummary();
+    return;
+  }
+
+  if (stage === "stop") {
+    dangerForm.hidden = true;
+    questionFlow.hidden = true;
+    summary.hidden = true;
+    dangerResult.hidden = false;
+    dangerResult.className = flow.genericResult.className || "result-card";
+    dangerResult.innerHTML = flow.genericResult.html;
+    return;
+  }
+
+  dangerForm.hidden = false;
+  questionFlow.hidden = true;
+  summary.hidden = true;
+  dangerResult.hidden = false;
+  const selected = answers[dangerQuestions[0].id]?.values || [];
+  selected.forEach((value) => {
+    const input = dangerForm.querySelector(`input[value="${CSS.escape(value)}"]`);
+    if (input instanceof HTMLInputElement) input.checked = true;
+  });
+}
+
+function restoreAcuteFlow(flow) {
+  acuteQuestionIndex = Math.min(acuteQuestionIndex, Math.max(acuteRecordQuestions.length - 1, 0));
+  const stateForm = document.querySelector("#acuteStateForm");
+  const recordFlow = document.querySelector("#acuteRecordFlow");
+  const stopResult = document.querySelector("#acuteStopResult");
+  const summary = document.querySelector("#acuteSummary");
+  const stage = flow.acuteStage;
+
+  if (stage === "record") {
+    stateForm.hidden = true;
+    stopResult.hidden = true;
+    summary.hidden = true;
+    recordFlow.hidden = false;
+    renderAcuteRecordQuestion();
+    return;
+  }
+
+  if (stage === "summary") {
+    stateForm.hidden = true;
+    stopResult.hidden = true;
+    recordFlow.hidden = true;
+    renderAcuteSummary();
+    return;
+  }
+
+  if (stage === "stop") {
+    stateForm.hidden = true;
+    recordFlow.hidden = true;
+    summary.hidden = true;
+    stopResult.hidden = false;
+    stopResult.innerHTML = flow.acuteResultHtml;
+    return;
+  }
+
+  stateForm.hidden = false;
+  recordFlow.hidden = true;
+  stopResult.hidden = true;
+  summary.hidden = true;
+  const selected = acuteAnswers[acuteStateQuestion.id]?.values?.[0];
+  const input = selected && stateForm.querySelector(`input[value="${CSS.escape(selected)}"]`);
+  if (input instanceof HTMLInputElement) input.checked = true;
+}
+
+function restoreAppState() {
+  let state;
+  try {
+    const raw = sessionStorage.getItem(APP_STATE_STORAGE_KEY);
+    if (!raw) return false;
+    state = JSON.parse(raw);
+  } catch (error) {
+    clearAppState();
+    return false;
+  }
+
+  if (!isValidAppState(state) || !symptomFlowConfigs[state.currentFlowKey]) {
+    clearAppState();
+    return false;
+  }
+
+  const viewExists = [...document.querySelectorAll(".view")].some((view) => view.id === state.activeView);
+  if (!viewExists) {
+    clearAppState();
+    return false;
+  }
+
+  replaceObjectContents(answers, state.answers);
+  replaceObjectContents(acuteAnswers, state.acuteAnswers);
+  currentFlowKey = state.currentFlowKey;
+  currentVomitQuestionIndex = state.currentVomitQuestionIndex;
+  acuteQuestionIndex = state.acuteQuestionIndex;
+  Object.assign(hospitalMemoState, cloneState(state.hospitalMemoState));
+
+  if (state.activeView === "vomit-check") restoreGenericFlow(state.flow);
+  if (state.activeView === "acute-detail") restoreAcuteFlow(state.flow);
+  if (state.activeView === "hospital-memo-editor") renderHospitalMemoEditor();
+  if (state.activeView === "hospital-memo-display") renderHospitalMemoDisplay();
+
+  applyFormValues(document.querySelector("#memoForm"), state.forms.memo);
+  applyFormValues(document.querySelector("#hospitalMemoForm"), state.forms.hospitalMemo);
+  updateHospitalAgePreview();
+  setActiveView(state.activeView, { scroll: false });
+  return true;
+}
+
+function scheduleAppStateSave() {
+  window.clearTimeout(appStateSaveTimer);
+  appStateSaveTimer = window.setTimeout(saveAppState, 250);
+}
+
+function bindPersistentFormDrafts() {
+  ["#memoForm", "#hospitalMemoForm"].forEach((selector) => {
+    const form = document.querySelector(selector);
+    form?.addEventListener("input", scheduleAppStateSave);
+    form?.addEventListener("change", scheduleAppStateSave);
+  });
+}
+
+bindPersistentFormDrafts();
+restoreAppState();
+window.addEventListener("beforeunload", saveAppState);
