@@ -1927,6 +1927,10 @@ lifeConcerns.forEach(([title, cause, action, goods, caution]) => {
 
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.requireAuth && !isAuthenticated()) {
+      requestAuthentication({ type: button.dataset.requireAuth });
+      return;
+    }
     if (button.dataset.flow) {
       currentFlowKey = button.dataset.flow;
     }
@@ -3060,3 +3064,227 @@ function bindPersistentFormDrafts() {
 bindPersistentFormDrafts();
 restoreAppState();
 window.addEventListener("beforeunload", saveAppState);
+
+let supabaseClient = null;
+let authenticatedUser = null;
+let authMode = "login";
+let authResumeHandled = false;
+
+function getSupabaseRuntimeConfig() {
+  if (typeof SUPABASE_CONFIG === "undefined" || !isPlainObject(SUPABASE_CONFIG)) return null;
+  const { url, publishableKey } = SUPABASE_CONFIG;
+  if (typeof url !== "string" || typeof publishableKey !== "string") return null;
+  if (url.includes("REPLACE_WITH_") || publishableKey.includes("REPLACE_WITH_")) return null;
+  if (!url.startsWith("https://") || !publishableKey.startsWith("sb_publishable_")) return null;
+  return { url, publishableKey };
+}
+
+function isAuthenticated() {
+  return Boolean(authenticatedUser);
+}
+
+function getAppRedirectUrl() {
+  const { origin, pathname } = window.location;
+  const appPath = pathname.endsWith("/index.html")
+    ? pathname.slice(0, -"index.html".length)
+    : pathname.endsWith("/") ? pathname : `${pathname}/`;
+  return `${origin}${appPath}`;
+}
+
+function setAuthFeedback(message = "", isError = false) {
+  const feedback = document.querySelector("#authFeedback");
+  if (!feedback) return;
+  feedback.hidden = !message;
+  feedback.textContent = message;
+  feedback.classList.toggle("is-error", isError);
+}
+
+function setAuthMode(mode) {
+  authMode = mode === "signup" ? "signup" : "login";
+  const isSignup = authMode === "signup";
+  document.querySelector("#auth-title").textContent = isSignup ? "新規登録" : "ログイン";
+  document.querySelector("#authSubmit").textContent = isSignup ? "新規登録" : "ログイン";
+  document.querySelector("#authModeToggle").textContent = isSignup ? "ログインはこちら" : "はじめての方はこちら";
+  document.querySelector("#authPassword").autocomplete = isSignup ? "new-password" : "current-password";
+  setAuthFeedback();
+}
+
+function updateAuthMenu() {
+  const loginButton = document.querySelector("#authMenuLogin");
+  const logoutButton = document.querySelector("#authMenuLogout");
+  if (!loginButton || !logoutButton) return;
+  loginButton.hidden = isAuthenticated();
+  logoutButton.hidden = !isAuthenticated();
+}
+
+function closeAuthMenu() {
+  const panel = document.querySelector("#authMenuPanel");
+  const button = document.querySelector("#authMenuButton");
+  if (!panel || !button) return;
+  panel.hidden = true;
+  button.setAttribute("aria-expanded", "false");
+}
+
+function requestAuthentication(action = null) {
+  authResumeHandled = false;
+  if (action) setPendingAction(action);
+  saveAppState();
+  setAuthMode("login");
+  setActiveView("auth");
+  closeAuthMenu();
+  if (!supabaseClient) {
+    setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
+  }
+}
+
+function restoreAfterAuthentication() {
+  if (authResumeHandled) return;
+  authResumeHandled = true;
+  restoreAppState();
+  const action = getPendingAction();
+  clearPendingAction();
+
+  if (action?.type === "register_cat") {
+    setActiveView("profile");
+  } else {
+    setActiveView("home");
+  }
+
+  const callbackUrl = new URL(window.location.href);
+  if (callbackUrl.searchParams.has("code") || callbackUrl.hash) {
+    window.history.replaceState({}, document.title, getAppRedirectUrl());
+  }
+}
+
+function isAuthCallbackUrl() {
+  const url = new URL(window.location.href);
+  return url.searchParams.has("code") || url.hash.includes("access_token=");
+}
+
+async function initializeAuth() {
+  const config = getSupabaseRuntimeConfig();
+  if (!config || !window.supabase?.createClient) {
+    updateAuthMenu();
+    return;
+  }
+
+  try {
+    supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
+      auth: {
+        persistSession: true,
+        detectSessionInUrl: true,
+        autoRefreshToken: true
+      }
+    });
+
+    const { data } = await supabaseClient.auth.getSession();
+    authenticatedUser = data.session?.user || null;
+    updateAuthMenu();
+
+    if (authenticatedUser && isAuthCallbackUrl()) {
+      restoreAfterAuthentication();
+    }
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      authenticatedUser = session?.user || null;
+      updateAuthMenu();
+
+      if (event === "SIGNED_IN") {
+        restoreAfterAuthentication();
+      }
+
+      if (event === "SIGNED_OUT") {
+        authResumeHandled = false;
+        clearAppState();
+        clearPendingAction();
+      }
+    });
+  } catch (error) {
+    supabaseClient = null;
+    authenticatedUser = null;
+    updateAuthMenu();
+  }
+}
+
+document.querySelector("#authMenuButton")?.addEventListener("click", () => {
+  const panel = document.querySelector("#authMenuPanel");
+  const button = document.querySelector("#authMenuButton");
+  if (!panel || !button) return;
+  panel.hidden = !panel.hidden;
+  button.setAttribute("aria-expanded", String(!panel.hidden));
+});
+
+document.querySelector("#authMenuLogin")?.addEventListener("click", () => requestAuthentication());
+
+document.querySelector("#authMenuLogout")?.addEventListener("click", async () => {
+  closeAuthMenu();
+  if (!supabaseClient) return;
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) {
+    showToast("ログアウトできませんでした。時間をおいてもう一度お試しください。");
+    return;
+  }
+  clearAppState();
+  clearPendingAction();
+  setActiveView("home");
+  showToast("ログアウトしました。");
+});
+
+document.querySelector("#authModeToggle")?.addEventListener("click", () => {
+  setAuthMode(authMode === "login" ? "signup" : "login");
+});
+
+document.querySelector("#authCancel")?.addEventListener("click", () => {
+  clearPendingAction();
+  if (!restoreAppState()) setActiveView("home");
+});
+
+document.querySelector("#googleSignIn")?.addEventListener("click", async () => {
+  if (!supabaseClient) {
+    setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
+    return;
+  }
+  saveAppState();
+  setAuthFeedback();
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: getAppRedirectUrl() }
+  });
+  if (error) {
+    setAuthFeedback("ログインできませんでした。時間をおいてもう一度お試しください。", true);
+  }
+});
+
+document.querySelector("#authForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const email = form.elements.email.value.trim();
+  const password = form.elements.password.value;
+
+  if (!supabaseClient) {
+    setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
+    form.elements.password.value = "";
+    return;
+  }
+
+  setAuthFeedback();
+  const result = authMode === "signup"
+    ? await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: getAppRedirectUrl() } })
+    : await supabaseClient.auth.signInWithPassword({ email, password });
+  form.elements.password.value = "";
+
+  if (result.error) {
+    setAuthFeedback("ログインできませんでした。入力内容をご確認ください。", true);
+    return;
+  }
+
+  if (authMode === "signup" && !result.data.session) {
+    setAuthFeedback("確認メールを送りました。メール内のリンクから登録を完了してください。");
+    return;
+  }
+
+  restoreAfterAuthentication();
+});
+
+setAuthMode("login");
+initializeAuth();

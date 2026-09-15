@@ -24,7 +24,16 @@
           <img class="brand-mark" src="assets/logo-mascot.png" alt="ねこモヤ相談所のマスコット">
           <span>ねこモヤ相談所</span>
         </button>
-        <p class="header-note">診断ではなく、不安を整理するための場所です。</p>
+        <div class="header-actions">
+          <p class="header-note">診断ではなく、不安を整理するための場所です。</p>
+          <div class="auth-menu">
+            <button id="authMenuButton" class="auth-menu-button" type="button" aria-label="アカウントメニュー" aria-expanded="false">⚙</button>
+            <div id="authMenuPanel" class="auth-menu-panel" hidden>
+              <button id="authMenuLogin" type="button">ログイン</button>
+              <button id="authMenuLogout" type="button" hidden>ログアウト</button>
+            </div>
+          </div>
+        </div>
       </header>
 
       <main>
@@ -39,7 +48,7 @@
             <div class="hero-actions">
               <button class="primary-btn nav-link hero-btn-symptoms" type="button" data-view="symptoms">症状から探す</button>
               <button class="secondary-btn nav-link hero-btn-chat" type="button" data-view="chat">AIに相談してみる</button>
-              <button class="ghost-btn nav-link hero-btn-profile" type="button" data-view="profile">うちの子情報を登録する</button>
+              <button class="ghost-btn nav-link hero-btn-profile" type="button" data-view="profile" data-require-auth="register_cat">うちの子情報を登録する</button>
               <button class="ghost-btn nav-link hero-btn-life" type="button" data-view="life">暮らしのお悩みを見る</button>
             </div>
           </div>
@@ -1796,6 +1805,31 @@
           <div id="profilePreview" class="memo-output"></div>
         </section>
 
+        <section id="auth" class="view" aria-labelledby="auth-title">
+          <div class="auth-card">
+            <div class="auth-kinako">
+              <img class="kinako-avatar" src="assets/kinako.png" alt="きなこ">
+              <p>大切な記録を残しておけるにゃん♪</p>
+            </div>
+            <p class="eyebrow">ねこモヤへようこそ</p>
+            <h1 id="auth-title">ログイン</h1>
+            <p class="auth-lead">うちの子の情報や病院メモを残しておくために、ログインをお願いしています。相談だけなら、ログインは必要ありません。</p>
+
+            <button id="googleSignIn" class="secondary-btn auth-google-button" type="button">Googleで続ける</button>
+            <div class="auth-divider" aria-hidden="true"><span>または</span></div>
+
+            <form id="authForm" class="auth-form">
+              <label>メールアドレス<input id="authEmail" name="email" type="email" autocomplete="email" required></label>
+              <label>パスワード<input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+              <p id="authFeedback" class="auth-feedback" aria-live="polite" hidden></p>
+              <button id="authSubmit" class="primary-btn" type="submit">ログイン</button>
+            </form>
+
+            <button id="authModeToggle" class="auth-text-button" type="button">はじめての方はこちら</button>
+            <button id="authCancel" class="auth-text-button" type="button">あとで</button>
+          </div>
+        </section>
+
         <section id="chat" class="view" aria-labelledby="chat-title">
           <div class="page-heading">
             <p class="eyebrow">AI相談チャット風</p>
@@ -1912,6 +1946,8 @@
       </button>
     </nav>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
