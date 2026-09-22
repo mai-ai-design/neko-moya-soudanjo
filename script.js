@@ -118,20 +118,6 @@ const lifeConcerns = [
   ["災害時の備え", "避難、停電、物流停止で日常ケアが難しくなります。", "フード、水、薬、写真、ワクチン情報をまとめます。", "キャリー、折りたたみトイレ、防災ポーチ。", "キャリーに慣れる練習を普段から少しずつしましょう。"]
 ];
 
-const profileFields = [
-  ["name", "名前", "text"],
-  ["age", "年齢", "text"],
-  ["breed", "猫種", "text"],
-  ["sex", "性別", "text"],
-  ["weight", "体重", "text"],
-  ["neuter", "避妊・去勢の有無", "text"],
-  ["condition", "持病", "textarea", "wide"],
-  ["medicine", "飲んでいる薬", "textarea", "wide"],
-  ["food", "食べているフード", "textarea", "wide"],
-  ["allergy", "アレルギー", "textarea", "wide"],
-  ["personality", "性格メモ", "textarea", "wide"]
-];
-
 const memoFields = [
   ["since", "いつから", "text"],
   ["symptom", "どんな症状", "textarea", "wide"],
@@ -2495,13 +2481,7 @@ function buildForm(formId, fields, buttonText) {
   form.append(submit);
 }
 
-buildForm("#profileForm", profileFields, "プロフィールをまとめる");
 buildForm("#memoForm", memoFields, "病院メモを作成する");
-
-document.querySelector("#profileForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  renderOutput("#profilePreview", "うちの子プロフィール", profileFields, event.currentTarget);
-});
 
 document.querySelector("#memoForm").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2866,6 +2846,7 @@ function saveAppState() {
 function clearAppState() {
   try {
     sessionStorage.removeItem(APP_STATE_STORAGE_KEY);
+    sessionStorage.removeItem("nekomoya_selected_cat_id");
   } catch (error) {
     // Nothing else is required when browser storage is unavailable.
   }
@@ -3067,6 +3048,7 @@ window.addEventListener("beforeunload", saveAppState);
 
 let supabaseClient = null;
 let authenticatedUser = null;
+let initialAuthResolved = false;
 let authMode = "login";
 let authResumeHandled = false;
 
@@ -3081,6 +3063,10 @@ function getSupabaseRuntimeConfig() {
 
 function isAuthenticated() {
   return Boolean(authenticatedUser);
+}
+
+function hasResolvedInitialAuth() {
+  return initialAuthResolved;
 }
 
 function getAppRedirectUrl() {
@@ -3112,9 +3098,11 @@ function setAuthMode(mode) {
 function updateAuthMenu() {
   const loginButton = document.querySelector("#authMenuLogin");
   const logoutButton = document.querySelector("#authMenuLogout");
-  if (!loginButton || !logoutButton) return;
-  loginButton.hidden = isAuthenticated();
-  logoutButton.hidden = !isAuthenticated();
+  if (loginButton && logoutButton) {
+    loginButton.hidden = isAuthenticated();
+    logoutButton.hidden = !isAuthenticated();
+  }
+  window.NekoCats?.onAuthChanged?.();
 }
 
 function closeAuthMenu() {
@@ -3141,17 +3129,22 @@ function restoreAfterAuthentication() {
   if (authResumeHandled) return;
   authResumeHandled = true;
   restoreAppState();
+  const callbackUrl = new URL(window.location.href);
+  const next = callbackUrl.searchParams.get("next");
   const action = getPendingAction();
   clearPendingAction();
 
-  if (action?.type === "register_cat") {
-    setActiveView("profile");
+  if (isAuthenticated() && (action?.type === "register_cat" || next === "register_cat")) {
+    if (window.NekoCats?.openRegister) {
+      window.NekoCats.openRegister();
+    } else {
+      setActiveView("home");
+    }
   } else {
     setActiveView("home");
   }
 
-  const callbackUrl = new URL(window.location.href);
-  if (callbackUrl.searchParams.has("code") || callbackUrl.hash) {
+  if (callbackUrl.searchParams.has("code") || callbackUrl.hash || callbackUrl.searchParams.has("next")) {
     window.history.replaceState({}, document.title, getAppRedirectUrl());
   }
 }
@@ -3164,6 +3157,7 @@ function isAuthCallbackUrl() {
 async function initializeAuth() {
   const config = getSupabaseRuntimeConfig();
   if (!config || !window.supabase?.createClient) {
+    initialAuthResolved = true;
     updateAuthMenu();
     return;
   }
@@ -3179,6 +3173,7 @@ async function initializeAuth() {
 
     const { data } = await supabaseClient.auth.getSession();
     authenticatedUser = data.session?.user || null;
+    initialAuthResolved = true;
     updateAuthMenu();
 
     if (authenticatedUser && isAuthCallbackUrl()) {
@@ -3202,6 +3197,7 @@ async function initializeAuth() {
   } catch (error) {
     supabaseClient = null;
     authenticatedUser = null;
+    initialAuthResolved = true;
     updateAuthMenu();
   }
 }
@@ -3268,8 +3264,9 @@ document.querySelector("#authForm")?.addEventListener("submit", async (event) =>
   }
 
   setAuthFeedback();
+  const isRegisterCatSignup = authMode === "signup" && getPendingAction()?.type === "register_cat";
   const result = authMode === "signup"
-    ? await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: getAppRedirectUrl() } })
+    ? await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: isRegisterCatSignup ? `${getAppRedirectUrl()}?next=register_cat` : getAppRedirectUrl() } })
     : await supabaseClient.auth.signInWithPassword({ email, password });
   form.elements.password.value = "";
 
@@ -3279,7 +3276,9 @@ document.querySelector("#authForm")?.addEventListener("submit", async (event) =>
   }
 
   if (authMode === "signup" && !result.data.session) {
-    setAuthFeedback("確認メールを送りました。メール内のリンクから登録を完了してください。");
+    setAuthFeedback(isRegisterCatSignup
+      ? "確認メールを送りました。メール内のリンクから登録を完了してください。メールのリンクを開くと、うちの子の登録に進めるにゃん🐾"
+      : "確認メールを送りました。メール内のリンクから登録を完了してください。");
     return;
   }
 
