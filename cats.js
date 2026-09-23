@@ -455,9 +455,9 @@
     const confirm = element("div", "cat-photo-delete-confirm");
     confirm.hidden = true;
     const confirmText = element("p", "", "写真を削除する？ 削除した写真は元に戻せないにゃん");
-    const confirmDelete = element("button", "primary-btn", "削除する");
+    const confirmDelete = element("button", "primary-btn", "削除");
     confirmDelete.type = "button";
-    const confirmCancel = element("button", "ghost-btn", "やめる");
+    const confirmCancel = element("button", "ghost-btn cat-photo-delete-cancel", "やめる");
     confirmCancel.type = "button";
     confirm.append(confirmText, confirmDelete, confirmCancel);
     let pendingBlob = null;

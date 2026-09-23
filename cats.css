@@ -368,7 +368,9 @@
 .cat-photo-delete-confirm {
   display: grid;
   gap: 8px;
-  width: min(100%, 260px);
+  grid-template-columns: 1fr;
+  width: 100%;
+  max-width: none;
   padding: 10px;
   border: 1px solid #e8bcbc;
   border-radius: 8px;
@@ -376,6 +378,7 @@
 }
 
 .cat-photo-delete-confirm p {
+  grid-column: 1 / -1;
   margin: 0;
   color: var(--text);
   font-size: 0.86rem;
@@ -383,7 +386,21 @@
 }
 
 .cat-photo-delete-confirm button {
+  width: 100%;
   min-height: 44px;
+  min-width: 0;
+  padding-right: 8px;
+  padding-left: 8px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.cat-photo-delete-confirm .cat-photo-delete-cancel {
+  width: 100%;
+  min-width: 72px;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .cat-detail-heading h1 {
