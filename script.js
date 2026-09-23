@@ -1979,12 +1979,15 @@ function setVomitKinakoMessage(message) {
   kinakoMessage.textContent = message;
 }
 
-function showToast(message) {
+function showToast(message, { variant = "", duration = 2200 } = {}) {
   const toast = document.querySelector("#toast");
   if (!toast) return;
   toast.textContent = message;
+  toast.classList.toggle("is-error", variant === "error");
   toast.classList.add("is-visible");
-  window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+  window.setTimeout(() => {
+    toast.classList.remove("is-visible", "is-error");
+  }, duration);
 }
 
 function renderDangerQuestion() {

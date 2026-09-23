@@ -155,7 +155,6 @@
             </div>
             <button class="ghost-btn nav-link" type="button" data-view="chat">AIに相談して整理する</button>
           </div>
-          <div id="toast" class="toast" role="status" aria-live="polite"></div>
         </section>
 
         <section id="vomit-detail" class="view" aria-labelledby="vomit-detail-title">
@@ -1813,6 +1812,18 @@
           </div>
           <button id="catRegisterBack" class="cat-back-link" type="button">うちの子たちへ戻る</button>
           <form id="catRegisterForm" class="form-card cat-register-form" novalidate>
+            <fieldset class="cat-fieldset cat-register-photo-fieldset">
+              <legend>写真 <small>あとからでも大丈夫</small></legend>
+              <div class="cat-register-photo-row">
+                <div id="catRegisterPhotoPreview" class="cat-photo-placeholder" role="img" aria-label="猫の写真はこれから追加できます">🐾</div>
+                <div class="cat-photo-controls">
+                  <input id="catRegisterPhotoInput" class="cat-visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
+                  <label id="catRegisterPhotoChoose" class="ghost-btn cat-photo-button" for="catRegisterPhotoInput">写真を選ぶ</label>
+                  <button id="catRegisterPhotoClear" class="ghost-btn cat-photo-button" type="button" hidden>写真をやめる</button>
+                  <p id="catRegisterPhotoStatus" class="cat-photo-status" aria-live="polite"></p>
+                </div>
+              </div>
+            </fieldset>
             <label>名前<span class="cat-required">必須</span><input id="catName" name="name" type="text" autocomplete="off"></label>
             <p id="catNameError" class="cat-field-error" aria-live="polite" hidden></p>
             <label>品種<input id="catBreed" name="breed" type="text" autocomplete="off"></label>
@@ -1995,6 +2006,8 @@
       </footer>
     </div>
 
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
     <nav class="bottom-nav" aria-label="スマホ用ナビゲーション">
       <button class="nav-link is-current" type="button" data-view="home">
         <span>⌂</span>ホーム
@@ -2013,6 +2026,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="script.js"></script>
+    <script src="cat-photo-storage.js"></script>
+    <script src="cat-photo-prepare.js"></script>
     <script src="cats.js"></script>
   </body>
 </html>

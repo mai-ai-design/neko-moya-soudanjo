@@ -809,6 +809,28 @@ p {
   transform: translate(-50%, 0);
 }
 
+.toast.is-error {
+  bottom: 104px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-color: #e3a19a;
+  background: #fff0ed;
+  color: #643c37;
+  box-shadow: 0 16px 38px rgba(133, 73, 64, 0.2);
+  font-weight: 700;
+  line-height: 1.65;
+  white-space: pre-line;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.toast.is-error::before {
+  content: "⚠️";
+  flex: 0 0 auto;
+  line-height: inherit;
+}
+
 .section-block,
 .page-heading {
   margin-top: 28px;
