@@ -547,6 +547,17 @@
   }
 }
 
+@media (max-width: 480px) {
+  #catHealthSave {
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+}
+
 @media (max-width: 374px) {
   .cat-detail-heading {
     grid-template-columns: 88px minmax(0, 1fr);
