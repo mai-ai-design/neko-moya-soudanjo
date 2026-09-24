@@ -1,5 +1,6 @@
 (() => {
   const SELECTED_CAT_STORAGE_KEY = "nekomoya_selected_cat_id";
+  const CAT_FORM_MODE_STORAGE_KEY = "nekomoya_cat_form_mode";
   const catViewIds = new Set(["cats", "cat-register", "cat-welcome", "cat-detail", "cat-health", "cat-about"]);
   const sexLabels = { male: "オス", female: "メス", unknown: "わからない" };
   const personalityTags = [
@@ -30,11 +31,19 @@
   const registerPhotoChoose = document.querySelector("#catRegisterPhotoChoose");
   const registerPhotoClear = document.querySelector("#catRegisterPhotoClear");
   const registerPhotoStatus = document.querySelector("#catRegisterPhotoStatus");
+  const registerTitle = document.querySelector("#cat-register-title");
+  const registerBackButton = document.querySelector("#catRegisterBack");
+  const registerPhotoFieldset = document.querySelector(".cat-register-photo-fieldset");
+  const registerLoadState = document.querySelector("#catRegisterLoadState");
   const healthForm = document.querySelector("#catHealthForm");
   const aboutForm = document.querySelector("#catAboutForm");
   let registerPhoto = { blob: null, url: null, busy: false };
   let welcomePhotoUrl = null;
   let detailPhotoPreviewUrl = null;
+  let catFormMode = "create";
+  let editingCatId = null;
+  let editingCatName = "";
+  let initialAgeFormState = null;
   let lastAuthUserId = undefined;
   let authChangeHandled = false;
 
@@ -61,7 +70,37 @@
     }
   }
 
+  function getStoredCatFormMode() {
+    try {
+      return sessionStorage.getItem(CAT_FORM_MODE_STORAGE_KEY) === "edit" ? "edit" : "create";
+    } catch (error) {
+      return "create";
+    }
+  }
+
+  function saveCatFormMode(mode) {
+    try {
+      if (mode === "edit") {
+        sessionStorage.setItem(CAT_FORM_MODE_STORAGE_KEY, "edit");
+      } else {
+        sessionStorage.removeItem(CAT_FORM_MODE_STORAGE_KEY);
+      }
+    } catch (error) {
+      // The form remains usable when session storage is unavailable.
+    }
+  }
+
+  function setCatFormMode(mode, { catId = null, name = "" } = {}) {
+    catFormMode = mode === "edit" ? "edit" : "create";
+    editingCatId = catFormMode === "edit" ? catId : null;
+    editingCatName = catFormMode === "edit" ? name : "";
+    initialAgeFormState = null;
+    saveCatFormMode(catFormMode);
+    updateRegisterPresentation();
+  }
+
   function setView(viewId) {
+    if (viewId !== "cat-register") setCatFormMode("create");
     if (viewId !== "cat-welcome") clearWelcomePhoto();
     if (viewId !== "cat-detail") {
       revokeObjectUrl(detailPhotoPreviewUrl);
@@ -253,8 +292,20 @@
     node.hidden = !message;
   }
 
+  function updateRegisterPresentation() {
+    const editing = catFormMode === "edit";
+    registerTitle.textContent = editing && editingCatName ? `${editingCatName}の基本情報` : "まずはこの子のことを教えてね🐾";
+    registerPhotoFieldset.hidden = editing;
+    registerBackButton.textContent = editing && editingCatName ? `${editingCatName}のページへ戻る` : "うちの子たちへ戻る";
+    updateRegisterButton();
+  }
+
   function updateRegisterButton() {
     const name = nameInput.value.trim();
+    if (catFormMode === "edit") {
+      submitButton.textContent = name ? `🐾 ${name}の基本情報を保存する` : "🐾 この子の基本情報を保存する";
+      return;
+    }
     submitButton.textContent = name ? `🐾 ${name}を登録する` : "🐾 この子を登録する";
   }
 
@@ -270,6 +321,8 @@
   function resetRegisterForm() {
     form.reset();
     clearRegisterPhoto();
+    form.hidden = false;
+    clearNode(registerLoadState);
     registerPhotoStatus.textContent = "";
     setRegisterPhotoControlsDisabled(false);
     showFieldError("#catNameError");
@@ -277,7 +330,7 @@
     showFieldError("#catNeuterError");
     showFieldError("#catRegisterError");
     updateDependentFields();
-    updateRegisterButton();
+    updateRegisterPresentation();
   }
 
   async function handleRegisterPhotoSelection() {
@@ -471,8 +524,109 @@
       requestAuthentication({ type: "register_cat" });
       return;
     }
+    setCatFormMode("create");
     resetRegisterForm();
     setView("cat-register");
+  }
+
+  function setRadioValue(name, value) {
+    const input = value && form.querySelector(`input[name="${name}"][value="${CSS.escape(value)}"]`);
+    if (input instanceof HTMLInputElement) input.checked = true;
+  }
+
+  function monthsSince(date) {
+    const today = todayParts();
+    let months = (today.year - date.year) * 12 + (today.month - date.month);
+    if (today.day < date.day) months -= 1;
+    return Math.max(0, months);
+  }
+
+  function captureAgeFormState() {
+    return {
+      mode: form.querySelector('input[name="ageMode"]:checked')?.value || null,
+      birthDate: document.querySelector("#catBirthDate").value,
+      estimatedNumber: document.querySelector("#catEstimatedNumber").value,
+      estimatedUnit: form.querySelector('input[name="estimatedUnit"]:checked')?.value || null,
+      birthYear: document.querySelector("#catBirthYear").value
+    };
+  }
+
+  function populateBasicEditForm(cat) {
+    nameInput.value = cat.name || "";
+    breedInput.value = cat.breed || "";
+    setRadioValue("sex", cat.sex);
+    setRadioValue("neuterStatus", cat.neuter_status);
+    document.querySelector("#catNeuterYear").value = cat.neuter_year ?? "";
+    document.querySelector("#catNeuterMonth").value = cat.neuter_month ?? "";
+
+    if (cat.birth_date_precision === "exact") {
+      setRadioValue("ageMode", "exact");
+      document.querySelector("#catBirthDate").value = cat.birth_date || "";
+    } else if (cat.birth_date_precision === "estimated") {
+      setRadioValue("ageMode", "estimated");
+      const date = parseLocalDate(cat.birth_date_estimated);
+      if (date) {
+        const months = monthsSince(date);
+        if (months < 12) {
+          document.querySelector("#catEstimatedNumber").value = months;
+          setRadioValue("estimatedUnit", "months");
+        } else {
+          document.querySelector("#catEstimatedNumber").value = Math.floor(months / 12);
+          setRadioValue("estimatedUnit", "years");
+        }
+      }
+    } else if (cat.birth_date_precision === "year_only") {
+      setRadioValue("ageMode", "year_only");
+      document.querySelector("#catBirthYear").value = parseLocalDate(cat.birth_date_estimated)?.year || "";
+    } else if (cat.birth_date_precision === "unknown") {
+      setRadioValue("ageMode", "unknown");
+    }
+    updateDependentFields();
+    initialAgeFormState = captureAgeFormState();
+    updateRegisterPresentation();
+  }
+
+  async function openBasicEdit() {
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    const catId = getSelectedCatId();
+    if (!catId) {
+      openCats();
+      return;
+    }
+    setCatFormMode("edit", { catId });
+    resetRegisterForm();
+    setView("cat-register");
+    form.hidden = true;
+    showLoading(registerLoadState, "基本情報を呼んでいるにゃん…");
+    const { data: cat, error } = await supabaseClient
+      .from("cats")
+      .select("id, name, breed, sex, birth_date, birth_date_estimated, birth_date_precision, neuter_status, neuter_year, neuter_month")
+      .eq("id", catId)
+      .maybeSingle();
+    if (document.querySelector(".view.is-active")?.id !== "cat-register" || getSelectedCatId() !== catId || catFormMode !== "edit" || editingCatId !== catId) return;
+    if (error || !cat) {
+      openCats();
+      return;
+    }
+    clearNode(registerLoadState);
+    editingCatName = cat.name;
+    populateBasicEditForm(cat);
+    showFieldError("#catNameError");
+    showFieldError("#catAgeError");
+    showFieldError("#catNeuterError");
+    showFieldError("#catRegisterError");
+    form.hidden = false;
+  }
+
+  function handleRegisterBack() {
+    if (catFormMode === "edit") {
+      openDetail();
+      return;
+    }
+    openCats();
   }
 
   function renderAboutOptions() {
@@ -943,6 +1097,10 @@
     const text = element("div", "");
     text.append(element("p", "eyebrow", "うちの子情報"), element("h1", "", cat.name));
     appendCatMeta(text, cat, true);
+    const editBasicButton = element("button", "ghost-btn cat-detail-edit-button", "✏️ 基本情報を編集");
+    editBasicButton.type = "button";
+    editBasicButton.addEventListener("click", openBasicEdit);
+    text.append(editBasicButton);
     heading.append(text);
     const aboutRows = [];
     const tags = tagLabels(cat.personality_tags);
@@ -986,8 +1144,83 @@
     }
   }
 
+  async function submitBasicEdit() {
+    const name = nameInput.value.trim();
+    showFieldError("#catNameError");
+    showFieldError("#catAgeError");
+    showFieldError("#catNeuterError");
+    showFieldError("#catRegisterError");
+    if (!name) {
+      showFieldError("#catNameError", "お名前を教えてね🐾");
+      return;
+    }
+    const selectedAgeMode = form.querySelector('input[name="ageMode"]:checked')?.value;
+    const selectedBirthDate = parseLocalDate(document.querySelector("#catBirthDate").value);
+    if (selectedAgeMode === "exact" && selectedBirthDate && isAfter(selectedBirthDate, todayParts())) {
+      showFieldError("#catAgeError", "未来の日付は選べないにゃん🐾");
+      return;
+    }
+    const ageChanged = JSON.stringify(captureAgeFormState()) !== JSON.stringify(initialAgeFormState);
+    let age = null;
+    if (ageChanged) {
+      try {
+        age = getAgeValues();
+      } catch (error) {
+        showFieldError("#catAgeError", error.message);
+        return;
+      }
+    }
+    let neuter;
+    try {
+      neuter = getNeuterValues();
+    } catch (error) {
+      showFieldError("#catNeuterError", error.message);
+      return;
+    }
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    if (!editingCatId || getSelectedCatId() !== editingCatId) {
+      openCats();
+      return;
+    }
+    const payload = {
+      name,
+      breed: breedInput.value.trim() || null,
+      sex: form.querySelector('input[name="sex"]:checked')?.value || null,
+      neuter_status: neuter.status,
+      neuter_year: neuter.year,
+      neuter_month: neuter.month
+    };
+    if (ageChanged) {
+      payload.birth_date_precision = age.precision;
+      payload.birth_date = age.birthDate;
+      payload.birth_date_estimated = age.estimatedDate;
+    }
+    submitButton.disabled = true;
+    setRegisterPhotoControlsDisabled(true);
+    submitButton.textContent = "保存しているにゃん…";
+    const { error } = await supabaseClient.from("cats").update(payload).eq("id", editingCatId);
+    if (error) {
+      console.error("Cat basic information saving failed:", error);
+      showFieldError("#catRegisterError", "保存できなかったにゃん。時間をおいてもう一度試してね");
+      setRegisterPhotoControlsDisabled(false);
+      updateRegisterButton();
+      return;
+    }
+    setRegisterPhotoControlsDisabled(false);
+    setCatFormMode("create");
+    showToast(`${name}の基本情報を保存したにゃん♪`);
+    openDetail();
+  }
+
   async function submitRegistration(event) {
     event.preventDefault();
+    if (catFormMode === "edit") {
+      await submitBasicEdit();
+      return;
+    }
     const name = nameInput.value.trim();
     showFieldError("#catNameError");
     showFieldError("#catAgeError");
@@ -1072,11 +1305,18 @@
     const activeView = document.querySelector(".view.is-active")?.id;
     if (!catViewIds.has(activeView)) return;
     if (!isAuthenticated()) {
+      setCatFormMode("create");
       setView("home");
       return;
     }
     if (activeView === "cats") openCats();
-    if (activeView === "cat-register") openRegister();
+    if (activeView === "cat-register") {
+      if (getStoredCatFormMode() === "edit" && getSelectedCatId()) {
+        openBasicEdit();
+      } else {
+        openRegister();
+      }
+    }
     if (activeView === "cat-welcome" || activeView === "cat-detail") openDetail();
     if (activeView === "cat-health") openHealth();
     if (activeView === "cat-about") openAbout();
@@ -1093,7 +1333,7 @@
       openRegister();
     }
   });
-  document.querySelector("#catRegisterBack")?.addEventListener("click", openCats);
+  registerBackButton?.addEventListener("click", handleRegisterBack);
   document.querySelector("#catHealthSkip")?.addEventListener("click", openDetail);
   document.querySelector("#catAboutSkip")?.addEventListener("click", openDetail);
   nameInput?.addEventListener("input", () => {
@@ -1113,6 +1353,7 @@
   healthForm?.addEventListener("submit", submitHealthProfile);
   aboutForm?.addEventListener("submit", submitAboutProfile);
   document.querySelectorAll(".nav-link").forEach((link) => link.addEventListener("click", () => {
+    setCatFormMode("create");
     clearWelcomePhoto();
     revokeObjectUrl(detailPhotoPreviewUrl);
     detailPhotoPreviewUrl = null;
@@ -1125,7 +1366,7 @@
   });
 
   renderAboutOptions();
-  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openHealth, openAbout };
+  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout };
   if (hasResolvedInitialAuth()) {
     onAuthChanged();
   }
