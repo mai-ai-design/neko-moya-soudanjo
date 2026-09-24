@@ -1,7 +1,27 @@
 (() => {
   const SELECTED_CAT_STORAGE_KEY = "nekomoya_selected_cat_id";
-  const catViewIds = new Set(["cats", "cat-register", "cat-welcome", "cat-detail"]);
+  const catViewIds = new Set(["cats", "cat-register", "cat-welcome", "cat-detail", "cat-health", "cat-about"]);
   const sexLabels = { male: "オス", female: "メス", unknown: "わからない" };
+  const personalityTags = [
+    ["affectionate", "甘えん坊"],
+    ["sociable", "人懐っこい"],
+    ["easygoing", "おっとり"],
+    ["gentle", "やさしい"],
+    ["curious", "好奇心旺盛"],
+    ["active", "活発"],
+    ["independent", "マイペース"],
+    ["timid", "こわがり"],
+    ["shy_with_strangers", "人見知り"],
+    ["wary", "警戒心が強い"],
+    ["strong_willed", "気が強い"],
+    ["sensitive", "繊細"]
+  ];
+  const livingStyles = [
+    ["indoor_only", "完全室内"],
+    ["mostly_indoor", "室内中心"],
+    ["sometimes_outdoor", "外にも出る"],
+    ["other", "その他"]
+  ];
   const form = document.querySelector("#catRegisterForm");
   const nameInput = document.querySelector("#catName");
   const breedInput = document.querySelector("#catBreed");
@@ -10,6 +30,8 @@
   const registerPhotoChoose = document.querySelector("#catRegisterPhotoChoose");
   const registerPhotoClear = document.querySelector("#catRegisterPhotoClear");
   const registerPhotoStatus = document.querySelector("#catRegisterPhotoStatus");
+  const healthForm = document.querySelector("#catHealthForm");
+  const aboutForm = document.querySelector("#catAboutForm");
   let registerPhoto = { blob: null, url: null, busy: false };
   let welcomePhotoUrl = null;
   let detailPhotoPreviewUrl = null;
@@ -113,6 +135,75 @@
     if (error?.code === "too_large_input") return "20MBまでの写真を選んでね🐾";
     if (error?.code === "too_large_output") return "この写真は大きすぎて保存できなかったにゃん。別の写真を選んでね";
     return "この写真は読み込めなかったにゃん。別の写真を選んでね";
+  }
+
+  function normalizedText(value) {
+    const text = typeof value === "string" ? value.trim() : "";
+    return text || null;
+  }
+
+  function tagLabels(values) {
+    const selected = new Set(Array.isArray(values) ? values : []);
+    return personalityTags.filter(([key]) => selected.has(key)).map(([, label]) => label);
+  }
+
+  function livingStyleLabel(value) {
+    return livingStyles.find(([key]) => key === value)?.[1] || null;
+  }
+
+  function formatWeight(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return null;
+    return `${Number(number.toFixed(2))}kg`;
+  }
+
+  function resetProfileScreen(formNode, successNode, loadNode) {
+    formNode.hidden = true;
+    successNode.hidden = true;
+    clearNode(successNode);
+    clearNode(loadNode);
+  }
+
+  function showProfileSuccess(container, title, actions) {
+    clearNode(container);
+    const heading = element("section", "cat-detail-section");
+    heading.append(element("h2", "", title));
+    container.append(heading);
+    const choices = element("div", "cat-followup-choices");
+    actions.forEach(([icon, label, handler]) => {
+      const button = element("button", "cat-welcome-choice cat-followup-choice");
+      button.type = "button";
+      button.append(element("span", "cat-choice-icon", icon), element("strong", "", label));
+      button.addEventListener("click", handler);
+      choices.append(button);
+    });
+    container.append(choices);
+    container.hidden = false;
+  }
+
+  function appendDetailRows(section, rows) {
+    const list = element("dl", "cat-detail-data");
+    rows.forEach(([label, value]) => {
+      const row = element("div", "cat-detail-data-row");
+      row.append(element("dt", "", label), element("dd", "cat-detail-value", value));
+      list.append(row);
+    });
+    section.append(list);
+  }
+
+  function createDetailProfileSection(icon, title, rows, emptyText, actionLabel, action) {
+    const section = element("section", "cat-detail-section");
+    section.append(element("h2", "", `${icon} ${title}`));
+    if (rows.length) {
+      appendDetailRows(section, rows);
+    } else {
+      section.append(element("p", "", emptyText));
+    }
+    const button = element("button", "ghost-btn cat-detail-edit-button", actionLabel);
+    button.type = "button";
+    button.addEventListener("click", action);
+    section.append(button);
+    return section;
   }
 
   function createBackButton() {
@@ -384,6 +475,244 @@
     setView("cat-register");
   }
 
+  function renderAboutOptions() {
+    const tags = document.querySelector("#catAboutTags");
+    const styles = document.querySelector("#catAboutLivingStyle");
+    if (tags?.childElementCount === 0) {
+      personalityTags.forEach(([key, label]) => {
+        const option = element("label");
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.name = "personalityTags";
+        input.value = key;
+        option.append(input, ` ${label}`);
+        tags.append(option);
+      });
+    }
+    if (styles?.childElementCount === 0) {
+      livingStyles.forEach(([key, label]) => {
+        const option = element("label");
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "livingStyle";
+        input.value = key;
+        option.append(input, ` ${label}`);
+        styles.append(option);
+      });
+    }
+  }
+
+  function updateHealthLabels(name) {
+    document.querySelector("#catHealthTitle").textContent = `${name}の健康について🐾`;
+    document.querySelector("#catHealthIntro").textContent = "分かるところだけで大丈夫だにゃん♪ あとからいつでも変えられるよ。";
+    document.querySelector("#catHealthSave").textContent = `🐾 ${name}の健康情報を保存する`;
+  }
+
+  function updateAboutLabels(name) {
+    document.querySelector("#catAboutTitle").textContent = `${name}のこと、もう少し教えて🐾`;
+    document.querySelector("#catAboutPersonalityTitle").textContent = `${name}って、どんな子？🐾`;
+    document.querySelector("#catAboutNoteLabel").textContent = `ほかにも、${name}らしいところは？`;
+    document.querySelector("#catAboutSave").textContent = `🐾 ${name}のことを保存する`;
+  }
+
+  function populateHealthProfile(profile = {}) {
+    document.querySelector("#catHealthWeight").value = profile.current_weight_kg ?? "";
+    const fields = [
+      ["catHealthChronicConditions", "catHealthChronicDetails", "chronic_conditions"],
+      ["catHealthMedications", "catHealthMedicationsDetails", "medications"],
+      ["catHealthAllergies", "catHealthAllergiesDetails", "allergies"],
+      ["catHealthSurgeryHistory", "catHealthSurgeryDetails", "surgery_history"],
+      ["catHealthVaccinationHistory", "catHealthVaccinationDetails", "vaccination_history"]
+    ];
+    fields.forEach(([fieldId, detailsId, key]) => {
+      const value = profile[key] || "";
+      document.querySelector(`#${fieldId}`).value = value;
+      document.querySelector(`#${detailsId}`).open = Boolean(normalizedText(value));
+    });
+  }
+
+  function populateAboutProfile(cat) {
+    const selected = new Set(Array.isArray(cat.personality_tags) ? cat.personality_tags : []);
+    document.querySelectorAll('input[name="personalityTags"]').forEach((input) => {
+      input.checked = selected.has(input.value);
+    });
+    document.querySelector("#catAboutNote").value = cat.personality_note || "";
+    document.querySelectorAll('input[name="livingStyle"]').forEach((input) => {
+      input.checked = input.value === cat.living_style && Boolean(livingStyleLabel(cat.living_style));
+    });
+    document.querySelector("#catAboutVetHandlingNote").value = cat.vet_handling_note || "";
+  }
+
+  async function openHealth() {
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    const catId = getSelectedCatId();
+    if (!catId) {
+      openCats();
+      return;
+    }
+    const formNode = document.querySelector("#catHealthForm");
+    const successNode = document.querySelector("#catHealthSuccess");
+    const loadNode = document.querySelector("#catHealthLoadState");
+    setView("cat-health");
+    resetProfileScreen(formNode, successNode, loadNode);
+    showLoading(loadNode, "健康情報を呼んでいるにゃん…");
+    const [{ data: cat, error: catError }, { data: profile, error: profileError }] = await Promise.all([
+      supabaseClient.from("cats").select("id, name").eq("id", catId).maybeSingle(),
+      supabaseClient.from("cat_health_profiles").select("cat_id, current_weight_kg, chronic_conditions, medications, allergies, surgery_history, vaccination_history").eq("cat_id", catId).maybeSingle()
+    ]);
+    if (document.querySelector(".view.is-active")?.id !== "cat-health" || getSelectedCatId() !== catId) return;
+    if (catError || !cat) {
+      openCats();
+      return;
+    }
+    if (profileError) {
+      console.error("Cat health profile loading failed:", profileError);
+      const message = element("p", "cat-status cat-status-error", "健康情報を読み込めなかったにゃん。時間をおいてもう一度開いてね");
+      const backButton = element("button", "cat-back-link", `${cat.name}のページを見る`);
+      backButton.type = "button";
+      backButton.addEventListener("click", openDetail);
+      clearNode(loadNode).append(message, backButton);
+      return;
+    }
+    clearNode(loadNode);
+    updateHealthLabels(cat.name);
+    healthForm.dataset.catName = cat.name;
+    healthForm.reset();
+    populateHealthProfile(profile || {});
+    showFieldError("#catHealthWeightError");
+    showFieldError("#catHealthError");
+    formNode.hidden = false;
+  }
+
+  async function openAbout() {
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    const catId = getSelectedCatId();
+    if (!catId) {
+      openCats();
+      return;
+    }
+    const formNode = document.querySelector("#catAboutForm");
+    const successNode = document.querySelector("#catAboutSuccess");
+    const loadNode = document.querySelector("#catAboutLoadState");
+    setView("cat-about");
+    resetProfileScreen(formNode, successNode, loadNode);
+    showLoading(loadNode, "この子のことを呼んでいるにゃん…");
+    const { data: cat, error } = await supabaseClient
+      .from("cats")
+      .select("id, name, personality_tags, personality_note, living_style, vet_handling_note")
+      .eq("id", catId)
+      .maybeSingle();
+    if (document.querySelector(".view.is-active")?.id !== "cat-about" || getSelectedCatId() !== catId) return;
+    if (error || !cat) {
+      openCats();
+      return;
+    }
+    clearNode(loadNode);
+    updateAboutLabels(cat.name);
+    aboutForm.dataset.catName = cat.name;
+    aboutForm.reset();
+    populateAboutProfile(cat);
+    showFieldError("#catAboutError");
+    formNode.hidden = false;
+  }
+
+  async function submitHealthProfile(event) {
+    event.preventDefault();
+    const catId = getSelectedCatId();
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    if (!catId) {
+      openCats();
+      return;
+    }
+    const rawWeight = document.querySelector("#catHealthWeight").value.trim();
+    let currentWeightKg = null;
+    showFieldError("#catHealthWeightError");
+    showFieldError("#catHealthError");
+    if (rawWeight) {
+      const value = Number(rawWeight);
+      if (!Number.isFinite(value) || value < 0.01 || value > 49.99) {
+        showFieldError("#catHealthWeightError", "体重は0.01〜49.99kgの間で入力してね🐾");
+        return;
+      }
+      currentWeightKg = Math.round(value * 100) / 100;
+    }
+    const saveButton = document.querySelector("#catHealthSave");
+    const originalText = saveButton.textContent;
+    saveButton.disabled = true;
+    saveButton.textContent = "保存しているにゃん…";
+    const { error } = await supabaseClient.from("cat_health_profiles").upsert({
+      cat_id: catId,
+      current_weight_kg: currentWeightKg,
+      chronic_conditions: normalizedText(document.querySelector("#catHealthChronicConditions").value),
+      medications: normalizedText(document.querySelector("#catHealthMedications").value),
+      allergies: normalizedText(document.querySelector("#catHealthAllergies").value),
+      surgery_history: normalizedText(document.querySelector("#catHealthSurgeryHistory").value),
+      vaccination_history: normalizedText(document.querySelector("#catHealthVaccinationHistory").value)
+    }, { onConflict: "cat_id" });
+    saveButton.disabled = false;
+    saveButton.textContent = originalText;
+    if (error) {
+      console.error("Cat health profile saving failed:", error);
+      showFieldError("#catHealthError", "保存できなかったにゃん。時間をおいてもう一度試してね");
+      return;
+    }
+    const name = healthForm.dataset.catName || "この子";
+    healthForm.hidden = true;
+    showProfileSuccess(document.querySelector("#catHealthSuccess"), `${name}の健康情報を保存したにゃん♪`, [
+      ["🐾", `${name}のことも、もう少し教える`, openAbout],
+      ["🏠", `${name}のページを見る`, openDetail]
+    ]);
+  }
+
+  async function submitAboutProfile(event) {
+    event.preventDefault();
+    const catId = getSelectedCatId();
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+    if (!catId) {
+      openCats();
+      return;
+    }
+    showFieldError("#catAboutError");
+    const selected = new Set(Array.from(document.querySelectorAll('input[name="personalityTags"]:checked'), (input) => input.value));
+    const personalityTagValues = personalityTags.filter(([key]) => selected.has(key)).map(([key]) => key);
+    const livingStyle = document.querySelector('input[name="livingStyle"]:checked')?.value || null;
+    const saveButton = document.querySelector("#catAboutSave");
+    const originalText = saveButton.textContent;
+    saveButton.disabled = true;
+    saveButton.textContent = "保存しているにゃん…";
+    const { error } = await supabaseClient.from("cats").update({
+      personality_tags: personalityTagValues.length ? personalityTagValues : null,
+      personality_note: normalizedText(document.querySelector("#catAboutNote").value),
+      living_style: livingStyle && livingStyleLabel(livingStyle) ? livingStyle : null,
+      vet_handling_note: normalizedText(document.querySelector("#catAboutVetHandlingNote").value)
+    }).eq("id", catId);
+    saveButton.disabled = false;
+    saveButton.textContent = originalText;
+    if (error) {
+      console.error("Cat about profile saving failed:", error);
+      showFieldError("#catAboutError", "保存できなかったにゃん。時間をおいてもう一度試してね");
+      return;
+    }
+    const name = aboutForm.dataset.catName || "この子";
+    aboutForm.hidden = true;
+    showProfileSuccess(document.querySelector("#catAboutSuccess"), `${name}のことを保存したにゃん♪`, [
+      ["🩺", "健康情報も登録する", openHealth],
+      ["🏠", `${name}のページを見る`, openDetail]
+    ]);
+  }
+
   function clearWelcomePhoto() {
     revokeObjectUrl(welcomePhotoUrl);
     welcomePhotoUrl = null;
@@ -404,12 +733,14 @@
     image.alt = "きなこ";
     kinako.append(image, element("p", "kinako-speech", "きなこもここにいるにゃん♪ これからよろしくにゃん！"));
     const choices = element("div", "cat-welcome-choices");
-    [["🩺", `${cat.name}の健康情報も登録する`, "体重・持病・お薬など"], ["🐾", `${cat.name}のことをもう少し教える`, "性格・暮らし・病院で苦手なことなど"]].forEach(([icon, title, copy]) => {
+    [["🩺", `${cat.name}の健康情報も登録する`, "体重・持病・お薬など", openHealth], ["🐾", `${cat.name}のことをもう少し教える`, "性格・暮らし・病院で苦手なことなど", openAbout]].forEach(([icon, title, copy, handler]) => {
       const choice = element("button", "cat-welcome-choice");
       choice.type = "button";
-      choice.disabled = true;
-      choice.setAttribute("aria-disabled", "true");
-      choice.append(element("span", "cat-choice-icon", icon), element("strong", "", title), element("span", "", copy), element("small", "", "もうすぐ登録できるようになるにゃん"));
+      choice.append(element("span", "cat-choice-icon", icon), element("strong", "", title), element("span", "", copy));
+      choice.addEventListener("click", () => {
+        clearWelcomePhoto();
+        handler();
+      });
       choices.append(choice);
     });
     const finish = element("button", "cat-welcome-choice cat-welcome-finish");
@@ -589,7 +920,7 @@
     showLoading(container, "この子のことを呼んでいるにゃん…");
     const { data: cat, error } = await supabaseClient
       .from("cats")
-      .select("id, name, breed, sex, birth_date, birth_date_estimated, birth_date_precision, photo_path")
+      .select("id, name, breed, sex, birth_date, birth_date_estimated, birth_date_precision, photo_path, personality_tags, personality_note, living_style, vet_handling_note")
       .eq("id", id)
       .maybeSingle();
     if (document.querySelector(".view.is-active")?.id !== "cat-detail") return;
@@ -597,6 +928,13 @@
       openCats();
       return;
     }
+    const { data: healthProfile, error: healthError } = await supabaseClient
+      .from("cat_health_profiles")
+      .select("cat_id, current_weight_kg, chronic_conditions, medications, allergies, surgery_history, vaccination_history")
+      .eq("cat_id", id)
+      .maybeSingle();
+    if (document.querySelector(".view.is-active")?.id !== "cat-detail" || getSelectedCatId() !== id) return;
+    if (healthError) console.error("Cat health profile loading failed:", healthError);
     clearNode(container);
     const heading = element("div", "cat-detail-heading");
     const photoArea = element("div", "cat-detail-photo-area");
@@ -606,17 +944,36 @@
     text.append(element("p", "eyebrow", "うちの子情報"), element("h1", "", cat.name));
     appendCatMeta(text, cat, true);
     heading.append(text);
-    const sections = [
-      ["🐾", `${cat.name}はこんな子`, `${cat.name}のこと、もう少し教えてくれる？🐾`],
-      ["🩺", `${cat.name}の健康について`, "分かるところから、少しずつで大丈夫だにゃん"],
-      ["", `${cat.name}の病院メモ`, "まだ病院メモはありません🐾"]
-    ];
-    const detailSections = element("div", "cat-detail-sections");
-    sections.forEach(([icon, title, copy]) => {
-      const section = element("section", "cat-detail-section");
-      section.append(element("h2", "", `${icon ? `${icon} ` : ""}${title}`), element("p", "", copy));
-      detailSections.append(section);
+    const aboutRows = [];
+    const tags = tagLabels(cat.personality_tags);
+    const personalityNote = normalizedText(cat.personality_note);
+    const livingStyle = livingStyleLabel(cat.living_style);
+    const vetHandlingNote = normalizedText(cat.vet_handling_note);
+    if (tags.length) aboutRows.push(["性格", tags.join(" ・ ")]);
+    if (personalityNote) aboutRows.push([`${cat.name}らしいところ`, personalityNote]);
+    if (livingStyle) aboutRows.push(["暮らし", livingStyle]);
+    if (vetHandlingNote) aboutRows.push(["病院で苦手なこと", vetHandlingNote]);
+    const healthRows = [];
+    const weight = formatWeight(healthProfile?.current_weight_kg);
+    if (weight) healthRows.push(["現在の体重", weight]);
+    [
+      ["持病・これまでの病気", healthProfile?.chronic_conditions],
+      ["お薬・サプリメント", healthProfile?.medications],
+      ["アレルギー・体質", healthProfile?.allergies],
+      ["大きな手術・治療歴", healthProfile?.surgery_history],
+      ["ワクチンについて", healthProfile?.vaccination_history]
+    ].forEach(([label, value]) => {
+      const textValue = normalizedText(value);
+      if (textValue) healthRows.push([label, textValue]);
     });
+    const detailSections = element("div", "cat-detail-sections");
+    detailSections.append(
+      createDetailProfileSection("🐾", `${cat.name}はこんな子`, aboutRows, "まだ詳しい情報はありません", aboutRows.length ? "✏️ 編集する" : "＋ 登録する", openAbout),
+      createDetailProfileSection("🩺", `${cat.name}の健康について`, healthRows, "まだ健康情報は登録されていません", healthRows.length ? "✏️ 編集する" : "＋ 登録する", openHealth)
+    );
+    const memo = element("section", "cat-detail-section");
+    memo.append(element("h2", "", `${cat.name}の病院メモ`), element("p", "", "まだ病院メモはありません🐾"));
+    detailSections.append(memo);
     container.append(heading, detailSections, createBackButton());
     if (!cat.photo_path) return;
     try {
@@ -721,6 +1078,8 @@
     if (activeView === "cats") openCats();
     if (activeView === "cat-register") openRegister();
     if (activeView === "cat-welcome" || activeView === "cat-detail") openDetail();
+    if (activeView === "cat-health") openHealth();
+    if (activeView === "cat-about") openAbout();
   }
 
   document.querySelector(".hero-btn-profile")?.addEventListener("click", (event) => {
@@ -735,6 +1094,8 @@
     }
   });
   document.querySelector("#catRegisterBack")?.addEventListener("click", openCats);
+  document.querySelector("#catHealthSkip")?.addEventListener("click", openDetail);
+  document.querySelector("#catAboutSkip")?.addEventListener("click", openDetail);
   nameInput?.addEventListener("input", () => {
     updateRegisterButton();
     if (registerPhoto.blob) renderRegisterPhotoPreview();
@@ -749,6 +1110,8 @@
   });
   form?.addEventListener("change", updateDependentFields);
   form?.addEventListener("submit", submitRegistration);
+  healthForm?.addEventListener("submit", submitHealthProfile);
+  aboutForm?.addEventListener("submit", submitAboutProfile);
   document.querySelectorAll(".nav-link").forEach((link) => link.addEventListener("click", () => {
     clearWelcomePhoto();
     revokeObjectUrl(detailPhotoPreviewUrl);
@@ -761,7 +1124,8 @@
     revokeObjectUrl(registerPhoto.url);
   });
 
-  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail };
+  renderAboutOptions();
+  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openHealth, openAbout };
   if (hasResolvedInitialAuth()) {
     onAuthChanged();
   }

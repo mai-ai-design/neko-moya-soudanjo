@@ -249,6 +249,17 @@
   margin: 0;
 }
 
+#catAboutTags label,
+#catAboutLivingStyle label {
+  align-items: center;
+  min-height: 44px;
+}
+
+#catAboutTags input,
+#catAboutLivingStyle input {
+  align-self: center;
+}
+
 .cat-dependent {
   display: grid;
   gap: 10px;
@@ -426,9 +437,104 @@
   color: var(--muted);
 }
 
+.cat-profile-form {
+  display: grid;
+  gap: 16px;
+}
+
+.cat-weight-field {
+  display: grid;
+  gap: 8px;
+}
+
+.cat-input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-input-with-unit input {
+  min-width: 0;
+}
+
+.cat-input-with-unit span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.cat-profile-details {
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+}
+
+.cat-profile-details[open] {
+  padding-bottom: 14px;
+}
+
+.cat-profile-details summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--brown-strong);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.cat-profile-details label {
+  display: grid;
+  gap: 8px;
+  color: var(--brown-strong);
+}
+
+.cat-profile-details textarea {
+  min-height: 88px;
+}
+
+.cat-followup-choices {
+  display: grid;
+  gap: 12px;
+}
+
+.cat-followup-choice {
+  min-height: 92px;
+}
+
+.cat-detail-data {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.cat-detail-data-row {
+  display: grid;
+  gap: 3px;
+}
+
+.cat-detail-data dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.cat-detail-value {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.cat-detail-edit-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 8px 12px;
+}
+
 @media (min-width: 640px) {
   .cat-list-grid,
-  .cat-welcome-choices {
+  .cat-welcome-choices,
+  .cat-followup-choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

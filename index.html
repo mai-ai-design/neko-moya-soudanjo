@@ -16,7 +16,7 @@
     >
     <link rel="icon" href="assets/logo-icon.png">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="cats.css?v=phase3b-delete-confirm-1">
+    <link rel="stylesheet" href="cats.css?v=phase3c-2">
   </head>
   <body>
     <div class="app-shell">
@@ -1878,6 +1878,77 @@
 
         <section id="cat-detail" class="view" aria-labelledby="cat-detail-title">
           <div id="catDetailContent" class="cat-content" aria-live="polite"></div>
+        </section>
+
+        <section id="cat-health" class="view" aria-labelledby="catHealthTitle">
+          <div class="page-heading">
+            <p class="eyebrow">うちの子情報</p>
+            <h1 id="catHealthTitle"></h1>
+            <p id="catHealthIntro"></p>
+          </div>
+          <div id="catHealthContent" class="cat-content" aria-live="polite">
+            <div id="catHealthLoadState"></div>
+            <form id="catHealthForm" class="form-card cat-profile-form" novalidate hidden>
+              <fieldset class="cat-fieldset">
+                <legend>現在の体重</legend>
+                <label class="cat-weight-field">体重
+                  <span class="cat-input-with-unit"><input id="catHealthWeight" name="currentWeightKg" type="number" inputmode="decimal" min="0.01" max="49.99" step="0.01"><span>kg</span></span>
+                </label>
+                <p id="catHealthWeightError" class="cat-field-error" aria-live="polite" hidden></p>
+              </fieldset>
+              <details id="catHealthChronicDetails" class="cat-profile-details">
+                <summary>持病・これまでの病気</summary>
+                <label class="sr-only" for="catHealthChronicConditions">持病・これまでの病気</label><textarea id="catHealthChronicConditions" name="chronicConditions" rows="3"></textarea>
+              </details>
+              <details id="catHealthMedicationsDetails" class="cat-profile-details">
+                <summary>お薬・サプリメント</summary>
+                <label class="sr-only" for="catHealthMedications">お薬・サプリメント</label><textarea id="catHealthMedications" name="medications" rows="3"></textarea>
+              </details>
+              <details id="catHealthAllergiesDetails" class="cat-profile-details">
+                <summary>アレルギー・体質</summary>
+                <label class="sr-only" for="catHealthAllergies">アレルギー・体質</label><textarea id="catHealthAllergies" name="allergies" rows="3"></textarea>
+              </details>
+              <details id="catHealthSurgeryDetails" class="cat-profile-details">
+                <summary>大きな手術・治療歴</summary>
+                <label class="sr-only" for="catHealthSurgeryHistory">大きな手術・治療歴</label><textarea id="catHealthSurgeryHistory" name="surgeryHistory" rows="3"></textarea>
+              </details>
+              <details id="catHealthVaccinationDetails" class="cat-profile-details">
+                <summary>ワクチンについて</summary>
+                <label class="sr-only" for="catHealthVaccinationHistory">ワクチンについて</label><textarea id="catHealthVaccinationHistory" name="vaccinationHistory" rows="3"></textarea>
+              </details>
+              <p id="catHealthError" class="cat-form-error" aria-live="polite" hidden></p>
+              <button id="catHealthSave" class="primary-btn" type="submit"></button>
+              <button id="catHealthSkip" class="cat-back-link" type="button">今は登録しない</button>
+            </form>
+            <div id="catHealthSuccess" class="cat-content" hidden></div>
+          </div>
+        </section>
+
+        <section id="cat-about" class="view" aria-labelledby="catAboutTitle">
+          <div class="page-heading">
+            <p class="eyebrow">うちの子情報</p>
+            <h1 id="catAboutTitle"></h1>
+          </div>
+          <div id="catAboutContent" class="cat-content" aria-live="polite">
+            <div id="catAboutLoadState"></div>
+            <form id="catAboutForm" class="form-card cat-profile-form" novalidate hidden>
+              <fieldset class="cat-fieldset">
+                <legend id="catAboutPersonalityTitle"></legend>
+                <div id="catAboutTags" class="cat-choice-stack"></div>
+              </fieldset>
+              <label id="catAboutNoteLabel"></label>
+              <textarea id="catAboutNote" name="personalityNote" rows="4"></textarea>
+              <fieldset class="cat-fieldset">
+                <legend>暮らし方</legend>
+                <div id="catAboutLivingStyle" class="cat-choice-stack"></div>
+              </fieldset>
+              <label>病院で苦手なこと・配慮してほしいこと<textarea id="catAboutVetHandlingNote" name="vetHandlingNote" rows="4" placeholder="抱っこが苦手、キャリーに入ると緊張する など"></textarea></label>
+              <p id="catAboutError" class="cat-form-error" aria-live="polite" hidden></p>
+              <button id="catAboutSave" class="primary-btn" type="submit"></button>
+              <button id="catAboutSkip" class="cat-back-link" type="button">今は登録しない</button>
+            </form>
+            <div id="catAboutSuccess" class="cat-content" hidden></div>
+          </div>
         </section>
 
         <section id="auth" class="view" aria-labelledby="auth-title">
