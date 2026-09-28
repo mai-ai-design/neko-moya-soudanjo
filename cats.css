@@ -597,6 +597,15 @@
 }
 
 @media (max-width: 480px) {
+  .cat-detail-photo-controls label.cat-photo-button {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
   .cat-birth-date-fields {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
