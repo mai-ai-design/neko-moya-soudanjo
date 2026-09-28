@@ -35,6 +35,15 @@
   const registerBackButton = document.querySelector("#catRegisterBack");
   const registerPhotoFieldset = document.querySelector(".cat-register-photo-fieldset");
   const registerLoadState = document.querySelector("#catRegisterLoadState");
+  const birthYearInput = document.querySelector("#catBirthYearInput");
+  const birthMonthInput = document.querySelector("#catBirthMonthInput");
+  const birthDayInput = document.querySelector("#catBirthDayInput");
+  const birthDatePickerInput = document.querySelector("#catBirthDate");
+  const birthDatePickerButton = document.querySelector("#catBirthDatePickerButton");
+  const oldBirthYearConfirm = document.querySelector("#catOldBirthYearConfirm");
+  const oldBirthYearConfirmText = document.querySelector("#catOldBirthYearConfirmText");
+  const oldBirthYearConfirmButton = document.querySelector("#catOldBirthYearConfirmButton");
+  const oldBirthYearCancelButton = document.querySelector("#catOldBirthYearCancelButton");
   const healthForm = document.querySelector("#catHealthForm");
   const aboutForm = document.querySelector("#catAboutForm");
   let registerPhoto = { blob: null, url: null, busy: false };
@@ -44,6 +53,8 @@
   let editingCatId = null;
   let editingCatName = "";
   let initialAgeFormState = null;
+  let confirmedOldBirthYear = null;
+  let savedOldBirthYear = null;
   let lastAuthUserId = undefined;
   let authChangeHandled = false;
 
@@ -94,6 +105,7 @@
     catFormMode = mode === "edit" ? "edit" : "create";
     editingCatId = catFormMode === "edit" ? catId : null;
     editingCatName = catFormMode === "edit" ? name : "";
+    if (catFormMode === "create") savedOldBirthYear = null;
     initialAgeFormState = null;
     saveCatFormMode(catFormMode);
     updateRegisterPresentation();
@@ -258,7 +270,8 @@
   }
 
   function daysInMonth(year, month) {
-    return new Date(year, month, 0).getDate();
+    if (month === 2) return isLeapYear(year) ? 29 : 28;
+    return [4, 6, 9, 11].includes(month) ? 30 : 31;
   }
 
   function dateString(parts) {
@@ -268,13 +281,117 @@
   function parseLocalDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return null;
     const [year, month, day] = value.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+    if (!Number.isInteger(year) || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
     return { year, month, day };
   }
 
   function isAfter(left, right) {
     return left.year > right.year || (left.year === right.year && (left.month > right.month || (left.month === right.month && left.day > right.day)));
+  }
+
+  function isLeapYear(year) {
+    return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  }
+
+  function getExactBirthDateParts() {
+    const yearValue = birthYearInput.value;
+    const monthValue = birthMonthInput.value;
+    const dayValue = birthDayInput.value;
+    if (!yearValue || !monthValue || !dayValue) return null;
+    const year = Number(yearValue);
+    const month = Number(monthValue);
+    const day = Number(dayValue);
+    if (!/^\d{4}$/.test(yearValue) || !Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+    return parseLocalDate(dateString({ year, month, day }));
+  }
+
+  function rebuildBirthDayOptions() {
+    if (!birthDayInput) return;
+    const selectedDay = birthDayInput.value;
+    const month = Number(birthMonthInput.value);
+    const yearValue = birthYearInput.value;
+    const year = /^\d{4}$/.test(yearValue) ? Number(yearValue) : null;
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "選ぶ";
+    birthDayInput.replaceChildren(option);
+    if (!month || month < 1 || month > 12) return;
+    const days = month === 2 ? (!year || isLeapYear(year) ? 29 : 28) : daysInMonth(year || 2000, month);
+    for (let day = 1; day <= days; day += 1) {
+      const dayOption = document.createElement("option");
+      dayOption.value = String(day);
+      dayOption.textContent = `${day}日`;
+      birthDayInput.append(dayOption);
+    }
+    if (Number(selectedDay) >= 1 && Number(selectedDay) <= days) birthDayInput.value = selectedDay;
+  }
+
+  function syncBirthDatePickerValue() {
+    const date = getExactBirthDateParts();
+    birthDatePickerInput.value = date ? dateString(date) : "";
+  }
+
+  function resetBirthDateControls() {
+    birthYearInput.value = "";
+    birthMonthInput.value = "";
+    rebuildBirthDayOptions();
+    birthDatePickerInput.value = "";
+    birthDatePickerInput.classList.add("cat-visually-hidden");
+    birthDatePickerButton.hidden = false;
+    birthDatePickerInput.max = dateString(todayParts());
+  }
+
+  function applyBirthDatePickerValue() {
+    const date = parseLocalDate(birthDatePickerInput.value);
+    if (!date) return;
+    birthYearInput.value = String(date.year).padStart(4, "0");
+    birthMonthInput.value = String(date.month);
+    rebuildBirthDayOptions();
+    birthDayInput.value = String(date.day);
+    syncBirthDatePickerValue();
+    birthDatePickerInput.classList.add("cat-visually-hidden");
+    birthDatePickerButton.hidden = false;
+  }
+
+  function openBirthDatePicker() {
+    const date = getExactBirthDateParts();
+    birthDatePickerInput.value = date ? dateString(date) : "";
+    birthDatePickerInput.max = dateString(todayParts());
+    birthDatePickerInput.classList.add("cat-visually-hidden");
+    try {
+      if (typeof birthDatePickerInput.showPicker !== "function") throw new Error("showPicker is unavailable");
+      birthDatePickerInput.showPicker();
+    } catch (error) {
+      birthDatePickerInput.classList.remove("cat-visually-hidden");
+      birthDatePickerButton.hidden = true;
+      birthDatePickerInput.focus();
+    }
+  }
+
+  function getOldBirthYearForConfirmation() {
+    const mode = form.querySelector('input[name="ageMode"]:checked')?.value;
+    const yearValue = mode === "exact" ? birthYearInput.value : mode === "year_only" ? document.querySelector("#catBirthYear").value : "";
+    const year = Number(yearValue);
+    if (!/^\d{4}$/.test(yearValue) || !Number.isInteger(year) || year > todayParts().year - 30) return null;
+    return year;
+  }
+
+  function showOldBirthYearConfirmation(year) {
+    oldBirthYearConfirmText.textContent = `📅 ${year}年生まれで合ってるにゃん？`;
+    oldBirthYearConfirm.dataset.year = String(year);
+    oldBirthYearConfirm.hidden = false;
+  }
+
+  function needsOldBirthYearConfirmation() {
+    const year = getOldBirthYearForConfirmation();
+    if (!year || confirmedOldBirthYear === year) return false;
+    showOldBirthYearConfirmation(year);
+    return true;
+  }
+
+  function restoreConfirmedOldBirthYear(yearValue) {
+    const year = Number(yearValue);
+    confirmedOldBirthYear = /^\d{4}$/.test(yearValue) && Number.isInteger(year) && year === savedOldBirthYear ? savedOldBirthYear : null;
   }
 
   function shiftFromToday(years = 0, months = 0) {
@@ -321,6 +438,10 @@
   function resetRegisterForm() {
     form.reset();
     clearRegisterPhoto();
+    resetBirthDateControls();
+    confirmedOldBirthYear = null;
+    savedOldBirthYear = null;
+    oldBirthYearConfirm.hidden = true;
     form.hidden = false;
     clearNode(registerLoadState);
     registerPhotoStatus.textContent = "";
@@ -361,9 +482,15 @@
     if (mode === "unknown") return { precision: "unknown", birthDate: null, estimatedDate: null };
 
     if (mode === "exact") {
-      const date = parseLocalDate(document.querySelector("#catBirthDate").value);
+      if (!birthYearInput.value || !birthMonthInput.value || !birthDayInput.value) {
+        throw new Error("生年月日は年・月・日をすべて教えてね🐾");
+      }
+      const year = Number(birthYearInput.value);
+      if (!/^\d{4}$/.test(birthYearInput.value) || !Number.isInteger(year)) throw new Error("生年月日を確認してね🐾");
+      if (year > today.year) throw new Error("未来の日付は選べないにゃん🐾");
+      const date = getExactBirthDateParts();
       if (!date) throw new Error("生年月日を確認してね🐾");
-      if (isAfter(date, today)) throw new Error("未来の日付は選べないにゃん");
+      if (isAfter(date, today)) throw new Error("未来の日付は選べないにゃん🐾");
       return { precision: "exact", birthDate: dateString(date), estimatedDate: null };
     }
 
@@ -544,7 +671,9 @@
   function captureAgeFormState() {
     return {
       mode: form.querySelector('input[name="ageMode"]:checked')?.value || null,
-      birthDate: document.querySelector("#catBirthDate").value,
+      birthYearInput: birthYearInput.value,
+      birthMonthInput: birthMonthInput.value,
+      birthDayInput: birthDayInput.value,
       estimatedNumber: document.querySelector("#catEstimatedNumber").value,
       estimatedUnit: form.querySelector('input[name="estimatedUnit"]:checked')?.value || null,
       birthYear: document.querySelector("#catBirthYear").value
@@ -561,7 +690,14 @@
 
     if (cat.birth_date_precision === "exact") {
       setRadioValue("ageMode", "exact");
-      document.querySelector("#catBirthDate").value = cat.birth_date || "";
+      const date = parseLocalDate(cat.birth_date);
+      if (date) {
+        birthYearInput.value = String(date.year).padStart(4, "0");
+        birthMonthInput.value = String(date.month);
+        rebuildBirthDayOptions();
+        birthDayInput.value = String(date.day);
+        syncBirthDatePickerValue();
+      }
     } else if (cat.birth_date_precision === "estimated") {
       setRadioValue("ageMode", "estimated");
       const date = parseLocalDate(cat.birth_date_estimated);
@@ -582,6 +718,8 @@
       setRadioValue("ageMode", "unknown");
     }
     updateDependentFields();
+    savedOldBirthYear = getOldBirthYearForConfirmation();
+    confirmedOldBirthYear = savedOldBirthYear;
     initialAgeFormState = captureAgeFormState();
     updateRegisterPresentation();
   }
@@ -1154,12 +1292,6 @@
       showFieldError("#catNameError", "お名前を教えてね🐾");
       return;
     }
-    const selectedAgeMode = form.querySelector('input[name="ageMode"]:checked')?.value;
-    const selectedBirthDate = parseLocalDate(document.querySelector("#catBirthDate").value);
-    if (selectedAgeMode === "exact" && selectedBirthDate && isAfter(selectedBirthDate, todayParts())) {
-      showFieldError("#catAgeError", "未来の日付は選べないにゃん🐾");
-      return;
-    }
     const ageChanged = JSON.stringify(captureAgeFormState()) !== JSON.stringify(initialAgeFormState);
     let age = null;
     if (ageChanged) {
@@ -1177,6 +1309,7 @@
       showFieldError("#catNeuterError", error.message);
       return;
     }
+    if (ageChanged && needsOldBirthYearConfirmation()) return;
     if (!isAuthenticated() || !supabaseClient) {
       requestAuthentication({ type: "register_cat" });
       return;
@@ -1244,6 +1377,7 @@
       showFieldError("#catNeuterError", error.message);
       return;
     }
+    if (needsOldBirthYearConfirmation()) return;
     if (!isAuthenticated() || !supabaseClient) {
       requestAuthentication({ type: "register_cat" });
       return;
@@ -1347,6 +1481,37 @@
   });
   registerPhotoChoose?.addEventListener("click", (event) => {
     if (registerPhoto.busy) event.preventDefault();
+  });
+  birthMonthInput?.addEventListener("change", () => {
+    rebuildBirthDayOptions();
+    syncBirthDatePickerValue();
+  });
+  birthYearInput?.addEventListener("input", () => {
+    restoreConfirmedOldBirthYear(birthYearInput.value);
+    oldBirthYearConfirm.hidden = true;
+    rebuildBirthDayOptions();
+    syncBirthDatePickerValue();
+  });
+  birthDayInput?.addEventListener("change", syncBirthDatePickerValue);
+  birthDatePickerButton?.addEventListener("click", openBirthDatePicker);
+  birthDatePickerInput?.addEventListener("change", () => {
+    oldBirthYearConfirm.hidden = true;
+    applyBirthDatePickerValue();
+    restoreConfirmedOldBirthYear(birthYearInput.value);
+  });
+  document.querySelector("#catBirthYear")?.addEventListener("input", () => {
+    restoreConfirmedOldBirthYear(document.querySelector("#catBirthYear").value);
+    oldBirthYearConfirm.hidden = true;
+  });
+  oldBirthYearConfirmButton?.addEventListener("click", () => {
+    confirmedOldBirthYear = Number(oldBirthYearConfirm.dataset.year);
+    oldBirthYearConfirm.hidden = true;
+    form.requestSubmit();
+  });
+  oldBirthYearCancelButton?.addEventListener("click", () => {
+    oldBirthYearConfirm.hidden = true;
+    const mode = form.querySelector('input[name="ageMode"]:checked')?.value;
+    (mode === "exact" ? birthYearInput : document.querySelector("#catBirthYear"))?.focus();
   });
   form?.addEventListener("change", updateDependentFields);
   form?.addEventListener("submit", submitRegistration);
