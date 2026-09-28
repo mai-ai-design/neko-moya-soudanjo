@@ -548,6 +548,12 @@
 }
 
 @media (max-width: 480px) {
+  .cat-detail-heading h1 {
+    font-size: 1.25rem;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
   #catHealthSave {
     padding-right: 8px;
     padding-left: 8px;
@@ -555,6 +561,14 @@
     white-space: nowrap;
     word-break: keep-all;
     overflow-wrap: normal;
+  }
+
+  #catRegisterSubmit {
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: clamp(0.72rem, 3.2vw, 0.78rem);
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 }
 
