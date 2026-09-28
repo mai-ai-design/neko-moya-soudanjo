@@ -111,15 +111,29 @@
     updateRegisterPresentation();
   }
 
-  function setView(viewId) {
+  function setView(viewId, { history = "push" } = {}) {
     if (viewId !== "cat-register") setCatFormMode("create");
+    if (viewId !== "cat-register") clearRegisterPhoto();
     if (viewId !== "cat-welcome") clearWelcomePhoto();
     if (viewId !== "cat-detail") {
       revokeObjectUrl(detailPhotoPreviewUrl);
       detailPhotoPreviewUrl = null;
     }
-    setActiveView(viewId);
+    const historyState = viewId === "cat-register"
+      ? catFormMode === "edit" && editingCatId
+        ? { catFormMode: "edit", catId: editingCatId }
+        : { catFormMode: "create" }
+      : {};
+    setActiveView(viewId, { history, historyState });
     saveAppState();
+  }
+
+  function leaveForHistoryNavigation() {
+    setCatFormMode("create");
+    clearWelcomePhoto();
+    revokeObjectUrl(detailPhotoPreviewUrl);
+    detailPhotoPreviewUrl = null;
+    clearRegisterPhoto();
   }
 
   function clearNode(node) {
@@ -584,12 +598,12 @@
     }
   }
 
-  async function openCats() {
+  async function openCats({ history = "push" } = {}) {
     if (!isAuthenticated()) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
-    setView("cats");
+    setView("cats", { history });
     const container = document.querySelector("#catsContent");
     showLoading(container);
     const { data, error } = await supabaseClient
@@ -646,14 +660,14 @@
     }
   }
 
-  function openRegister() {
+  function openRegister({ history = "push" } = {}) {
     if (!isAuthenticated()) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
     setCatFormMode("create");
     resetRegisterForm();
-    setView("cat-register");
+    setView("cat-register", { history });
   }
 
   function setRadioValue(name, value) {
@@ -724,19 +738,21 @@
     updateRegisterPresentation();
   }
 
-  async function openBasicEdit() {
+  async function openBasicEdit({ history = "push", catId: requestedCatId = null } = {}) {
     if (!isAuthenticated() || !supabaseClient) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
-    const catId = getSelectedCatId();
+    const hasRequestedCatId = requestedCatId !== null;
+    const catId = hasRequestedCatId ? isUuid(requestedCatId) ? requestedCatId : null : getSelectedCatId();
     if (!catId) {
-      openCats();
+      openCats({ history });
       return;
     }
+    saveSelectedCatId(catId);
     setCatFormMode("edit", { catId });
     resetRegisterForm();
-    setView("cat-register");
+    setView("cat-register", { history });
     form.hidden = true;
     showLoading(registerLoadState, "基本情報を呼んでいるにゃん…");
     const { data: cat, error } = await supabaseClient
@@ -746,7 +762,7 @@
       .maybeSingle();
     if (document.querySelector(".view.is-active")?.id !== "cat-register" || getSelectedCatId() !== catId || catFormMode !== "edit" || editingCatId !== catId) return;
     if (error || !cat) {
-      openCats();
+      openCats({ history });
       return;
     }
     clearNode(registerLoadState);
@@ -835,20 +851,20 @@
     document.querySelector("#catAboutVetHandlingNote").value = cat.vet_handling_note || "";
   }
 
-  async function openHealth() {
+  async function openHealth({ history = "push" } = {}) {
     if (!isAuthenticated() || !supabaseClient) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
     const catId = getSelectedCatId();
     if (!catId) {
-      openCats();
+      openCats({ history });
       return;
     }
     const formNode = document.querySelector("#catHealthForm");
     const successNode = document.querySelector("#catHealthSuccess");
     const loadNode = document.querySelector("#catHealthLoadState");
-    setView("cat-health");
+    setView("cat-health", { history });
     resetProfileScreen(formNode, successNode, loadNode);
     showLoading(loadNode, "健康情報を呼んでいるにゃん…");
     const [{ data: cat, error: catError }, { data: profile, error: profileError }] = await Promise.all([
@@ -857,7 +873,7 @@
     ]);
     if (document.querySelector(".view.is-active")?.id !== "cat-health" || getSelectedCatId() !== catId) return;
     if (catError || !cat) {
-      openCats();
+      openCats({ history });
       return;
     }
     if (profileError) {
@@ -879,20 +895,20 @@
     formNode.hidden = false;
   }
 
-  async function openAbout() {
+  async function openAbout({ history = "push" } = {}) {
     if (!isAuthenticated() || !supabaseClient) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
     const catId = getSelectedCatId();
     if (!catId) {
-      openCats();
+      openCats({ history });
       return;
     }
     const formNode = document.querySelector("#catAboutForm");
     const successNode = document.querySelector("#catAboutSuccess");
     const loadNode = document.querySelector("#catAboutLoadState");
-    setView("cat-about");
+    setView("cat-about", { history });
     resetProfileScreen(formNode, successNode, loadNode);
     showLoading(loadNode, "この子のことを呼んでいるにゃん…");
     const { data: cat, error } = await supabaseClient
@@ -902,7 +918,7 @@
       .maybeSingle();
     if (document.querySelector(".view.is-active")?.id !== "cat-about" || getSelectedCatId() !== catId) return;
     if (error || !cat) {
-      openCats();
+      openCats({ history });
       return;
     }
     clearNode(loadNode);
@@ -1040,19 +1056,20 @@
     finish.append(element("span", "cat-choice-icon", "🏠"), element("strong", "", "今日はここまで"), element("span", "", "あとからいつでも追加できます"));
     finish.addEventListener("click", () => {
       clearWelcomePhoto();
-      openDetail();
+      openDetail({ history: "replace" });
     });
     choices.append(finish);
     container.append(heading, celebration, kinako, choices);
   }
 
   async function openWelcome(cat, options = {}) {
-    setView("cat-welcome");
+    const { history = "replace", ...welcomeOptions } = options;
+    setView("cat-welcome", { history });
     if (cat?.name) {
-      renderWelcome(cat, options);
+      renderWelcome(cat, welcomeOptions);
       return;
     }
-    await openDetail();
+    await openDetail({ history: "replace" });
   }
 
   function createDetailPhotoControls(cat) {
@@ -1106,7 +1123,7 @@
       choose.hidden = false;
       remove.hidden = !cat.photo_path;
       status.textContent = "";
-      openDetail();
+      openDetail({ history: "none" });
     };
 
     input.addEventListener("change", async () => {
@@ -1151,7 +1168,7 @@
         revokeObjectUrl(detailPhotoPreviewUrl);
         detailPhotoPreviewUrl = null;
         showToast("写真を保存したにゃん♪");
-        openDetail();
+        openDetail({ history: "none" });
       } catch (error) {
         console.error("Cat photo save failed:", error);
         showToast("写真を保存できなかったにゃん。\n時間をおいてもう一度試してね", { variant: "error", duration: 5000 });
@@ -1182,7 +1199,7 @@
         const result = await CatPhotoStorage.removeProfilePhoto(supabaseClient, { catId: cat.id });
         if (result.storageCleanupError) console.warn("Cat photo storage cleanup failed:", result.storageCleanupError);
         showToast("写真を削除したにゃん");
-        openDetail();
+        openDetail({ history: "none" });
       } catch (error) {
         console.error("Cat photo removal failed:", error);
         status.textContent = "写真を削除できなかったにゃん。時間をおいてもう一度試してね";
@@ -1197,17 +1214,17 @@
     return controls;
   }
 
-  async function openDetail() {
+  async function openDetail({ history = "push" } = {}) {
     if (!isAuthenticated()) {
       requestAuthentication({ type: "register_cat" });
       return;
     }
     const id = getSelectedCatId();
     if (!id) {
-      openCats();
+      openCats({ history });
       return;
     }
-    setView("cat-detail");
+    setView("cat-detail", { history });
     const container = document.querySelector("#catDetailContent");
     showLoading(container, "この子のことを呼んでいるにゃん…");
     const { data: cat, error } = await supabaseClient
@@ -1217,7 +1234,7 @@
       .maybeSingle();
     if (document.querySelector(".view.is-active")?.id !== "cat-detail") return;
     if (error || !cat) {
-      openCats();
+      openCats({ history });
       return;
     }
     const { data: healthProfile, error: healthError } = await supabaseClient
@@ -1345,7 +1362,7 @@
     setRegisterPhotoControlsDisabled(false);
     setCatFormMode("create");
     showToast(`${name}の基本情報を保存したにゃん♪`);
-    openDetail();
+    openDetail({ history: "replace" });
   }
 
   async function submitRegistration(event) {
@@ -1440,20 +1457,20 @@
     if (!catViewIds.has(activeView)) return;
     if (!isAuthenticated()) {
       setCatFormMode("create");
-      setView("home");
+      setView("home", { history: "replace" });
       return;
     }
-    if (activeView === "cats") openCats();
+    if (activeView === "cats") openCats({ history: "none" });
     if (activeView === "cat-register") {
       if (getStoredCatFormMode() === "edit" && getSelectedCatId()) {
-        openBasicEdit();
+        openBasicEdit({ history: "none" });
       } else {
-        openRegister();
+        openRegister({ history: "none" });
       }
     }
-    if (activeView === "cat-welcome" || activeView === "cat-detail") openDetail();
-    if (activeView === "cat-health") openHealth();
-    if (activeView === "cat-about") openAbout();
+    if (activeView === "cat-welcome" || activeView === "cat-detail") openDetail({ history: "none" });
+    if (activeView === "cat-health") openHealth({ history: "none" });
+    if (activeView === "cat-about") openAbout({ history: "none" });
   }
 
   document.querySelector(".hero-btn-profile")?.addEventListener("click", (event) => {
@@ -1517,13 +1534,7 @@
   form?.addEventListener("submit", submitRegistration);
   healthForm?.addEventListener("submit", submitHealthProfile);
   aboutForm?.addEventListener("submit", submitAboutProfile);
-  document.querySelectorAll(".nav-link").forEach((link) => link.addEventListener("click", () => {
-    setCatFormMode("create");
-    clearWelcomePhoto();
-    revokeObjectUrl(detailPhotoPreviewUrl);
-    detailPhotoPreviewUrl = null;
-    clearRegisterPhoto();
-  }));
+  document.querySelectorAll(".nav-link").forEach((link) => link.addEventListener("click", leaveForHistoryNavigation));
   window.addEventListener("pagehide", () => {
     clearWelcomePhoto();
     revokeObjectUrl(detailPhotoPreviewUrl);
@@ -1531,7 +1542,7 @@
   });
 
   renderAboutOptions();
-  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout };
+  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout, leaveForHistoryNavigation };
   if (hasResolvedInitialAuth()) {
     onAuthChanged();
   }

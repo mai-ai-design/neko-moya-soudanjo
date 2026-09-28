@@ -1924,18 +1924,21 @@ document.querySelectorAll(".nav-link").forEach((button) => {
   });
 });
 
-function showView(viewId) {
-  if (viewId === "vomit-check") {
+let isHandlingHistoryPopstate = false;
+
+function showView(viewId, { history = "push", resetFlow = true } = {}) {
+  if (resetFlow && viewId === "vomit-check") {
     resetVomitCheckPage();
   }
-  if (viewId === "acute-detail") {
+  if (resetFlow && viewId === "acute-detail") {
     resetAcutePage();
   }
-  setActiveView(viewId);
+  setActiveView(viewId, { history });
   saveAppState();
 }
 
-function setActiveView(viewId, { scroll = true } = {}) {
+function setActiveView(viewId, { scroll = true, history = "none", historyState = {} } = {}) {
+  const previousViewId = getActiveViewId();
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.toggle("is-active", view.id === viewId);
   });
@@ -1945,6 +1948,14 @@ function setActiveView(viewId, { scroll = true } = {}) {
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
+  if (!isHandlingHistoryPopstate && history !== "none") {
+    const state = { nekomoyaView: viewId, ...historyState };
+    if (history === "replace") {
+      window.history.replaceState(state, document.title, window.location.href);
+    } else if (history === "push" && previousViewId !== viewId) {
+      window.history.pushState(state, document.title, window.location.href);
+    }
+  }
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -3032,6 +3043,74 @@ function restoreAppState() {
   return true;
 }
 
+function replaceCurrentHistoryView() {
+  const activeViewId = getActiveViewId();
+  const currentState = window.history.state;
+  const state = currentState?.nekomoyaView === activeViewId ? currentState : { nekomoyaView: activeViewId };
+  window.history.replaceState(state, document.title, window.location.href);
+}
+
+async function restoreViewFromHistory(viewId, historyState = {}) {
+  const catViews = {
+    cats: "openCats",
+    "cat-detail": "openDetail",
+    "cat-health": "openHealth",
+    "cat-about": "openAbout"
+  };
+
+  if (viewId === "cat-welcome") {
+    await window.NekoCats?.openDetail?.({ history: "none" });
+    return;
+  }
+
+  if (viewId === "auth") {
+    window.NekoCats?.leaveForHistoryNavigation?.();
+    showView("home", { history: "none", resetFlow: false });
+    return;
+  }
+
+  if (viewId === "cat-register") {
+    if (historyState.catFormMode === "edit" && historyState.catId) {
+      await window.NekoCats?.openBasicEdit?.({ history: "none", catId: historyState.catId });
+      return;
+    }
+    await window.NekoCats?.openRegister?.({ history: "none" });
+    return;
+  }
+
+  if (catViews[viewId]) {
+    await window.NekoCats?.[catViews[viewId]]?.({ history: "none" });
+    return;
+  }
+
+  window.NekoCats?.leaveForHistoryNavigation?.();
+  if (viewId === "hospital-memo-editor") {
+    renderHospitalMemoEditor();
+    setActiveView(viewId, { history: "none" });
+    saveAppState();
+    return;
+  }
+
+  if (viewId === "hospital-memo-display") {
+    renderHospitalMemoDisplay();
+    setActiveView(viewId, { history: "none" });
+    saveAppState();
+    return;
+  }
+
+  showView(viewId, { history: "none", resetFlow: false });
+}
+
+window.addEventListener("popstate", (event) => {
+  const viewId = event.state?.nekomoyaView;
+  if (typeof viewId !== "string" || !document.getElementById(viewId)) return;
+  isHandlingHistoryPopstate = true;
+  Promise.resolve(restoreViewFromHistory(viewId, event.state)).finally(() => {
+    saveAppState();
+    isHandlingHistoryPopstate = false;
+  });
+});
+
 function scheduleAppStateSave() {
   window.clearTimeout(appStateSaveTimer);
   appStateSaveTimer = window.setTimeout(saveAppState, 250);
@@ -3121,7 +3200,7 @@ function requestAuthentication(action = null) {
   if (action) setPendingAction(action);
   saveAppState();
   setAuthMode("login");
-  setActiveView("auth");
+  setActiveView("auth", { history: "replace" });
   closeAuthMenu();
   if (!supabaseClient) {
     setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
@@ -3139,17 +3218,18 @@ function restoreAfterAuthentication() {
 
   if (isAuthenticated() && (action?.type === "register_cat" || next === "register_cat")) {
     if (window.NekoCats?.openRegister) {
-      window.NekoCats.openRegister();
+      window.NekoCats.openRegister({ history: "replace" });
     } else {
-      setActiveView("home");
+      setActiveView("home", { history: "replace" });
     }
   } else {
-    setActiveView("home");
+    setActiveView("home", { history: "replace" });
   }
 
   if (callbackUrl.searchParams.has("code") || callbackUrl.hash || callbackUrl.searchParams.has("next")) {
     window.history.replaceState({}, document.title, getAppRedirectUrl());
   }
+  replaceCurrentHistoryView();
 }
 
 function isAuthCallbackUrl() {
@@ -3225,7 +3305,7 @@ document.querySelector("#authMenuLogout")?.addEventListener("click", async () =>
   }
   clearAppState();
   clearPendingAction();
-  setActiveView("home");
+  setActiveView("home", { history: "replace" });
   showToast("ログアウトしました。");
 });
 
@@ -3235,7 +3315,8 @@ document.querySelector("#authModeToggle")?.addEventListener("click", () => {
 
 document.querySelector("#authCancel")?.addEventListener("click", () => {
   clearPendingAction();
-  if (!restoreAppState()) setActiveView("home");
+  if (!restoreAppState()) setActiveView("home", { history: "replace" });
+  replaceCurrentHistoryView();
 });
 
 document.querySelector("#googleSignIn")?.addEventListener("click", async () => {
@@ -3289,4 +3370,4 @@ document.querySelector("#authForm")?.addEventListener("submit", async (event) =>
 });
 
 setAuthMode("login");
-initializeAuth();
+initializeAuth().finally(replaceCurrentHistoryView);
