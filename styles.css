@@ -191,6 +191,14 @@ h1 {
   max-width: 12em;
 }
 
+#appetite-detail-title,
+#movement-detail-title,
+#acute-detail-title {
+  max-width: none;
+  font-size: clamp(1.85rem, 8vw, 3rem);
+  text-wrap: balance;
+}
+
 h2 {
   font-size: 1.35rem;
 }
@@ -1387,6 +1395,13 @@ textarea {
     font-size: clamp(1.55rem, 7vw, 1.9rem);
     word-break: keep-all;
     overflow-wrap: break-word;
+  }
+
+  .kinako-cta-card > div > .primary-btn.nav-link[data-view="vomit-check"] {
+    padding-inline: 10px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-wrap: balance;
   }
 }
 
