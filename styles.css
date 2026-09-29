@@ -199,6 +199,10 @@ h1 {
   text-wrap: balance;
 }
 
+.symptom-title-line {
+  display: inline;
+}
+
 h2 {
   font-size: 1.35rem;
 }
@@ -1395,6 +1399,12 @@ textarea {
     font-size: clamp(1.55rem, 7vw, 1.9rem);
     word-break: keep-all;
     overflow-wrap: break-word;
+  }
+
+  #appetite-detail-title .symptom-title-line,
+  #movement-detail-title .symptom-title-line,
+  #acute-detail-title .symptom-title-line {
+    display: block;
   }
 
   .kinako-cta-card > div > .primary-btn.nav-link[data-view="vomit-check"] {
