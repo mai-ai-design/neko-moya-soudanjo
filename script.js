@@ -1920,6 +1920,10 @@ document.querySelectorAll(".nav-link").forEach((button) => {
     if (button.dataset.flow) {
       currentFlowKey = button.dataset.flow;
     }
+    if (button.dataset.view === "chat") {
+      openChatFromNavigation();
+      return;
+    }
     showView(button.dataset.view);
   });
 });
@@ -2863,6 +2867,147 @@ document.querySelector("#hospitalMemoEdit")?.addEventListener("click", () => {
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const chatLog = document.querySelector("#chatLog");
+const chatTargetSelection = document.querySelector("#chatTargetSelection");
+const chatTargetList = document.querySelector("#chatTargetList");
+const chatConversation = document.querySelector("#chatConversation");
+const chatCurrentTarget = document.querySelector("#chatCurrentTarget");
+const chatWithoutCat = document.querySelector("#chatWithoutCat");
+const defaultChatMessage = "こんばんは。心配な気持ちを、まずは一緒にほどいていきましょう。どんな様子が気になっていますか？";
+let chatTargetRequestId = 0;
+
+function setChatTargetHistory(targetMode) {
+  const currentState = window.history.state;
+  if (currentState?.nekomoyaView !== "chat") return;
+  const state = { ...currentState };
+  if (targetMode === "none") {
+    state.chatTargetMode = "none";
+  } else {
+    delete state.chatTargetMode;
+  }
+  window.history.replaceState(state, document.title, window.location.href);
+}
+
+function hasNoChatTargetHistory() {
+  return window.history.state?.nekomoyaView === "chat" && window.history.state?.chatTargetMode === "none";
+}
+
+function setChatConversation(cat = null, { reset = false } = {}) {
+  chatTargetSelection.hidden = true;
+  chatConversation.hidden = false;
+  chatCurrentTarget.hidden = !cat;
+  chatCurrentTarget.textContent = cat ? `相談中：${cat.name}` : "";
+  if (!reset) return;
+  chatLog.replaceChildren();
+  addBubble(cat ? `${cat.name}のことだね。どんなことが気になってるにゃん？` : defaultChatMessage, "ai");
+}
+
+function createChatTargetChoice(cat) {
+  const button = document.createElement("button");
+  button.className = "chat-target-choice";
+  button.type = "button";
+  const photo = cat.photoUrl ? document.createElement("img") : document.createElement("span");
+  if (cat.photoUrl) {
+    photo.className = "chat-target-photo";
+    photo.src = cat.photoUrl;
+    photo.alt = "";
+  } else {
+    photo.className = "chat-target-placeholder";
+    photo.setAttribute("aria-hidden", "true");
+    photo.textContent = "🐾";
+  }
+  const name = document.createElement("span");
+  name.textContent = cat.name;
+  button.append(photo, name);
+  button.addEventListener("click", () => {
+    window.NekoCats?.saveSelectedCatId?.(cat.id);
+    setChatTargetHistory("cat");
+    setChatConversation(cat, { reset: true });
+    saveAppState();
+  });
+  return button;
+}
+
+async function getChatCats() {
+  const cats = await window.NekoCats?.getChatCats?.();
+  return Array.isArray(cats) ? cats : [];
+}
+
+async function getSelectedChatCat() {
+  const selectedId = window.NekoCats?.getSelectedCatId?.();
+  if (!selectedId) return null;
+  const cats = await getChatCats();
+  return cats.find((cat) => cat.id === selectedId) || null;
+}
+
+async function openChatFromNavigation() {
+  showView("chat");
+  const requestId = ++chatTargetRequestId;
+  if (!isAuthenticated()) {
+    setChatTargetHistory("none");
+    setChatConversation();
+    saveAppState();
+    return;
+  }
+  try {
+    const cats = await getChatCats();
+    if (requestId !== chatTargetRequestId || getActiveViewId() !== "chat") return;
+    if (!cats.length) {
+      setChatTargetHistory("none");
+      setChatConversation();
+      saveAppState();
+      return;
+    }
+    chatTargetList.replaceChildren(...cats.map(createChatTargetChoice));
+    chatConversation.hidden = true;
+    chatTargetSelection.hidden = false;
+    chatCurrentTarget.textContent = "";
+    chatCurrentTarget.hidden = true;
+    saveAppState();
+  } catch (error) {
+    if (requestId !== chatTargetRequestId || getActiveViewId() !== "chat") return;
+    setChatTargetHistory("none");
+    setChatConversation();
+    saveAppState();
+  }
+}
+
+async function openChatForSelectedCat({ history = "push", reset = true } = {}) {
+  showView("chat", { history });
+  const requestId = ++chatTargetRequestId;
+  if (hasNoChatTargetHistory()) {
+    setChatConversation(null, { reset });
+    saveAppState();
+    return;
+  }
+  try {
+    const cat = await getSelectedChatCat();
+    if (requestId !== chatTargetRequestId || getActiveViewId() !== "chat") return;
+    setChatTargetHistory(cat ? "cat" : "none");
+    setChatConversation(cat, { reset });
+  } catch (error) {
+    if (requestId !== chatTargetRequestId || getActiveViewId() !== "chat") return;
+    setChatTargetHistory("none");
+    setChatConversation(null, { reset });
+  }
+  saveAppState();
+}
+
+function restoreChatConversation() {
+  return openChatForSelectedCat({ history: "none", reset: false });
+}
+
+function refreshChatAfterAuthChange() {
+  if (getActiveViewId() !== "chat") return;
+  restoreChatConversation();
+}
+
+chatWithoutCat?.addEventListener("click", () => {
+  setChatTargetHistory("none");
+  setChatConversation(null, { reset: true });
+  saveAppState();
+});
+
+window.NekoChat = { openForSelectedCat: openChatForSelectedCat, restoreConversation: restoreChatConversation, refreshAfterAuthChange: refreshChatAfterAuthChange };
 
 document.querySelectorAll("[data-chat]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -3245,6 +3390,11 @@ async function restoreViewFromHistory(viewId, historyState = {}) {
   if (viewId === "auth") {
     window.NekoCats?.leaveForHistoryNavigation?.();
     showView("home", { history: "none", resetFlow: false });
+    return;
+  }
+
+  if (viewId === "chat") {
+    await window.NekoChat?.restoreConversation?.();
     return;
   }
 

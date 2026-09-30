@@ -1053,6 +1053,87 @@ textarea {
   padding: 14px;
 }
 
+.chat-ready-note {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.chat-target-selection {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: 0 10px 28px rgba(107, 79, 63, 0.08);
+}
+
+.chat-target-selection h2 {
+  margin: 0;
+  color: var(--brown-strong);
+  font-size: 1.05rem;
+}
+
+.chat-target-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+.chat-target-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--brown-strong);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.chat-target-choice:hover {
+  background: #fff5ef;
+}
+
+.chat-target-photo,
+.chat-target-placeholder {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.chat-target-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--mint);
+  color: var(--brown);
+}
+
+.chat-without-cat {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.chat-conversation {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-current-target {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .chat-log {
   display: grid;
   gap: 10px;
@@ -1344,6 +1425,13 @@ textarea {
 .bottom-nav button.is-current {
   background: var(--brown);
   color: #fffaf4;
+}
+
+@media (max-width: 374px) {
+  .bottom-nav button[data-view="chat"] {
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
 }
 
 .sr-only {

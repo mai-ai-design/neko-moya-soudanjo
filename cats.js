@@ -256,7 +256,7 @@
     section.append(list);
   }
 
-  function createDetailProfileSection(icon, title, rows, emptyText, actionLabel, action) {
+  function createDetailProfileSection(icon, title, rows, emptyText, actionLabel, action, chatLabel = "") {
     const section = element("section", "cat-detail-section");
     section.append(element("h2", "", `${icon} ${title}`));
     if (rows.length) {
@@ -268,7 +268,21 @@
     button.type = "button";
     button.addEventListener("click", action);
     section.append(button);
+    if (chatLabel) {
+      const chatButton = element("button", "ghost-btn cat-detail-chat-button", chatLabel);
+      chatButton.type = "button";
+      chatButton.addEventListener("click", openChatForSelectedCat);
+      section.append(chatButton);
+      if (!rows.length) section.append(element("p", "cat-detail-chat-note", "相談だけでも大丈夫だにゃん🐱"));
+    }
     return section;
+  }
+
+  function openChatForSelectedCat() {
+    const catId = getSelectedCatId();
+    if (!catId) return;
+    saveSelectedCatId(catId);
+    window.NekoChat?.openForSelectedCat?.();
   }
 
   function createBackButton() {
@@ -657,6 +671,25 @@
       });
     } catch (photoError) {
       console.warn("Cat list photo loading failed:", photoError);
+    }
+  }
+
+  async function getChatCats() {
+    if (!isAuthenticated() || !supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from("cats")
+      .select("id, name, photo_path, created_at")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    const cats = data || [];
+    const photoPaths = cats.map((cat) => cat.photo_path).filter(Boolean);
+    if (!photoPaths.length) return cats;
+    try {
+      const signedPhotos = await CatPhotoStorage.getProfilePhotoSignedUrls(supabaseClient, photoPaths);
+      const urlsByPath = new Map(signedPhotos.filter((photo) => !photo.error && photo.signedUrl).map((photo) => [photo.path, photo.signedUrl]));
+      return cats.map((cat) => ({ ...cat, photoUrl: urlsByPath.get(cat.photo_path) || "" }));
+    } catch (photoError) {
+      return cats;
     }
   }
 
@@ -1281,8 +1314,8 @@
     });
     const detailSections = element("div", "cat-detail-sections");
     detailSections.append(
-      createDetailProfileSection("🐾", `${cat.name}はこんな子`, aboutRows, "まだ詳しい情報はありません", aboutRows.length ? "✏️ 編集する" : "＋ 登録する", openAbout),
-      createDetailProfileSection("🩺", `${cat.name}の健康について`, healthRows, "まだ健康情報は登録されていません", healthRows.length ? "✏️ 編集する" : "＋ 登録する", openHealth)
+      createDetailProfileSection("🐾", `${cat.name}はこんな子`, aboutRows, "まだ詳しい情報はありません", aboutRows.length ? "✏️ 編集する" : "＋ 登録する", openAbout, `🐱 ${cat.name}のことをきなこに相談する`),
+      createDetailProfileSection("🩺", `${cat.name}の健康について`, healthRows, "まだ健康情報は登録されていません", healthRows.length ? "✏️ 編集する" : "＋ 登録する", openHealth, `🐱 ${cat.name}の体調をきなこに相談する`)
     );
     const memo = element("section", "cat-detail-section");
     memo.append(element("h2", "", `${cat.name}の病院メモ`), element("p", "", "まだ病院メモはありません🐾"));
@@ -1453,6 +1486,7 @@
     authChangeHandled = true;
     lastAuthUserId = userId;
     refreshProfileButton();
+    window.NekoChat?.refreshAfterAuthChange?.();
     const activeView = document.querySelector(".view.is-active")?.id;
     if (!catViewIds.has(activeView)) return;
     if (!isAuthenticated()) {
@@ -1542,7 +1576,7 @@
   });
 
   renderAboutOptions();
-  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout, leaveForHistoryNavigation };
+  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout, leaveForHistoryNavigation, getSelectedCatId, saveSelectedCatId, getChatCats };
   if (hasResolvedInitialAuth()) {
     onAuthChanged();
   }
