@@ -1129,6 +1129,47 @@ textarea {
   gap: 12px;
 }
 
+.hospital-birthdate-field {
+  display: grid;
+  gap: 8px;
+}
+
+.hospital-birthdate-label {
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.hospital-birthdate-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hospital-birthdate-fields label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.hospital-birthdate-picker {
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.hospital-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .hospital-created-at {
   margin: -4px 0 0;
   color: var(--muted);
@@ -1139,6 +1180,18 @@ textarea {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 500;
+}
+
+.hospital-birthdate-help {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.hospital-birthdate-error {
+  color: #b84a4a;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 #hospital-memo-editor-title {

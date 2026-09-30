@@ -2589,6 +2589,165 @@ function startHospitalMemoFromManual(form) {
   startHospitalMemo("manual", groups, data.get("question")?.trim() || "");
 }
 
+let hospitalBirthdatePickerFallback = false;
+
+function getHospitalBirthdateControls() {
+  return {
+    year: document.querySelector("#hospitalBirthYear"),
+    month: document.querySelector("#hospitalBirthMonth"),
+    day: document.querySelector("#hospitalBirthDay"),
+    date: document.querySelector("#hospitalBirthdate"),
+    picker: document.querySelector("#hospitalBirthDatePicker")
+  };
+}
+
+function getHospitalTodayParts() {
+  const today = new Date();
+  return { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate() };
+}
+
+function hospitalDateString({ year, month, day }) {
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function isHospitalLeapYear(year) {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function hospitalDaysInMonth(year, month) {
+  if (month === 2) return isHospitalLeapYear(year) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+function parseHospitalDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  if (month < 1 || month > 12 || day < 1 || day > hospitalDaysInMonth(year, month)) return null;
+  return { year, month, day };
+}
+
+function isHospitalDateAfter(left, right) {
+  return left.year > right.year || (left.year === right.year && (left.month > right.month || (left.month === right.month && left.day > right.day)));
+}
+
+function setHospitalBirthdateError(message = "") {
+  const error = document.querySelector("#hospitalBirthdateError");
+  if (!error) return;
+  error.hidden = !message;
+  error.textContent = message;
+}
+
+function setHospitalBirthdateMax() {
+  const { date } = getHospitalBirthdateControls();
+  if (date) date.max = hospitalDateString(getHospitalTodayParts());
+}
+
+function rebuildHospitalBirthDayOptions() {
+  const { year, month, day } = getHospitalBirthdateControls();
+  if (!year || !month || !day) return;
+  const selectedDay = day.value;
+  const monthValue = Number(month.value);
+  const yearValue = year.value.trim();
+  const fullYear = /^\d{4}$/.test(yearValue) ? Number(yearValue) : null;
+  day.replaceChildren(new Option("選ぶ", ""));
+  if (!monthValue || monthValue < 1 || monthValue > 12) return;
+  const days = monthValue === 2 ? (!fullYear || isHospitalLeapYear(fullYear) ? 29 : 28) : hospitalDaysInMonth(fullYear || 2000, monthValue);
+  for (let value = 1; value <= days; value += 1) day.add(new Option(`${value}日`, String(value)));
+  if (Number(selectedDay) >= 1 && Number(selectedDay) <= days) day.value = selectedDay;
+}
+
+function getHospitalBirthdatePartsFromControls() {
+  const { year, month, day } = getHospitalBirthdateControls();
+  if (!year || !month || !day || !year.value || !month.value || !day.value) return null;
+  const yearValue = year.value.trim();
+  if (!/^\d{4}$/.test(yearValue)) return null;
+  return parseHospitalDate(hospitalDateString({ year: Number(yearValue), month: Number(month.value), day: Number(day.value) }));
+}
+
+function syncHospitalBirthdateFromControls() {
+  const { date } = getHospitalBirthdateControls();
+  if (!date) return;
+  setHospitalBirthdateMax();
+  const birthdate = getHospitalBirthdatePartsFromControls();
+  if (!birthdate) {
+    date.value = "";
+    setHospitalBirthdateError();
+    updateHospitalAgePreview();
+    return;
+  }
+  if (isHospitalDateAfter(birthdate, getHospitalTodayParts())) {
+    date.value = "";
+    setHospitalBirthdateError("未来の日付は選べないにゃん🐾");
+    updateHospitalAgePreview();
+    return;
+  }
+  date.value = hospitalDateString(birthdate);
+  setHospitalBirthdateError();
+  updateHospitalAgePreview();
+}
+
+function syncHospitalBirthControlsFromDate() {
+  const { year, month, day, date } = getHospitalBirthdateControls();
+  if (!year || !month || !day || !date) return;
+  setHospitalBirthdateMax();
+  const birthdate = parseHospitalDate(date.value);
+  if (!birthdate) {
+    year.value = "";
+    month.value = "";
+    rebuildHospitalBirthDayOptions();
+    setHospitalBirthdateError();
+    updateHospitalAgePreview();
+    return;
+  }
+  if (isHospitalDateAfter(birthdate, getHospitalTodayParts())) {
+    date.value = "";
+    setHospitalBirthdateError("未来の日付は選べないにゃん🐾");
+    updateHospitalAgePreview();
+    return;
+  }
+  year.value = String(birthdate.year).padStart(4, "0");
+  month.value = String(birthdate.month);
+  rebuildHospitalBirthDayOptions();
+  day.value = String(birthdate.day);
+  setHospitalBirthdateError();
+  updateHospitalAgePreview();
+}
+
+function hideHospitalBirthdatePicker() {
+  const { date, picker } = getHospitalBirthdateControls();
+  if (!date || hospitalBirthdatePickerFallback) return;
+  date.classList.add("hospital-visually-hidden");
+  if (picker) picker.hidden = false;
+}
+
+function resetHospitalBirthdatePicker() {
+  const { date, picker } = getHospitalBirthdateControls();
+  hospitalBirthdatePickerFallback = false;
+  if (date) date.classList.add("hospital-visually-hidden");
+  if (picker) picker.hidden = false;
+  setHospitalBirthdateMax();
+}
+
+function openHospitalBirthdatePicker() {
+  const { date, picker } = getHospitalBirthdateControls();
+  if (!date || !picker) return;
+  const birthdate = getHospitalBirthdatePartsFromControls();
+  date.value = birthdate ? hospitalDateString(birthdate) : "";
+  setHospitalBirthdateMax();
+  hospitalBirthdatePickerFallback = false;
+  date.classList.remove("hospital-visually-hidden");
+  try {
+    if (typeof date.showPicker !== "function") throw new Error("showPicker is unavailable");
+    date.focus({ preventScroll: true });
+    date.showPicker();
+  } catch (error) {
+    hospitalBirthdatePickerFallback = true;
+    picker.hidden = true;
+    date.focus();
+  }
+}
+
 function renderHospitalMemoEditor() {
   const form = document.querySelector("#hospitalMemoForm");
   if (!form) return;
@@ -2600,6 +2759,8 @@ function renderHospitalMemoEditor() {
   form.elements.additional.value = hospitalMemoState.additional;
   form.elements.questions.value = hospitalMemoState.questions;
   document.querySelector("#hospitalMemoCreatedAt").textContent = `作成日時：${hospitalMemoState.createdAt}`;
+  resetHospitalBirthdatePicker();
+  syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
   const root = document.querySelector("#hospitalMemoSymptomFields");
   root.innerHTML = hospitalMemoState.groups.map((group, groupIndex) => `
@@ -2676,6 +2837,23 @@ document.querySelector("#hospitalMemoForm")?.addEventListener("submit", (event) 
 
 document.querySelector("#hospitalBirthdate")?.addEventListener("input", updateHospitalAgePreview);
 document.querySelector("#hospitalBirthdate")?.addEventListener("change", updateHospitalAgePreview);
+document.querySelector("#hospitalBirthMonth")?.addEventListener("change", () => {
+  rebuildHospitalBirthDayOptions();
+  syncHospitalBirthdateFromControls();
+});
+document.querySelector("#hospitalBirthYear")?.addEventListener("input", () => {
+  rebuildHospitalBirthDayOptions();
+  syncHospitalBirthdateFromControls();
+});
+document.querySelector("#hospitalBirthDay")?.addEventListener("change", syncHospitalBirthdateFromControls);
+document.querySelector("#hospitalBirthDatePicker")?.addEventListener("click", openHospitalBirthdatePicker);
+document.querySelector("#hospitalBirthdate")?.addEventListener("change", () => {
+  syncHospitalBirthControlsFromDate();
+  hideHospitalBirthdatePicker();
+});
+document.querySelector("#hospitalBirthdate")?.addEventListener("blur", () => {
+  window.setTimeout(() => hideHospitalBirthdatePicker(), 0);
+});
 
 document.querySelector("#hospitalMemoEdit")?.addEventListener("click", () => {
   renderHospitalMemoEditor();
@@ -3038,6 +3216,7 @@ function restoreAppState() {
 
   applyFormValues(document.querySelector("#memoForm"), state.forms.memo);
   applyFormValues(document.querySelector("#hospitalMemoForm"), state.forms.hospitalMemo);
+  syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
   setActiveView(state.activeView, { scroll: false });
   return true;
@@ -3125,6 +3304,8 @@ function bindPersistentFormDrafts() {
 }
 
 bindPersistentFormDrafts();
+resetHospitalBirthdatePicker();
+syncHospitalBirthControlsFromDate();
 restoreAppState();
 window.addEventListener("beforeunload", saveAppState);
 
