@@ -2896,9 +2896,10 @@ function setChatConversation(cat = null, { reset = false } = {}) {
   chatConversation.hidden = false;
   chatCurrentTarget.hidden = !cat;
   chatCurrentTarget.textContent = cat ? `相談中：${cat.name}` : "";
-  if (!reset) return;
-  chatLog.replaceChildren();
-  addBubble(cat ? `${cat.name}のことだね。どんなことが気になってるにゃん？` : defaultChatMessage, "ai");
+  if (reset || !chatLog.childElementCount) {
+    chatLog.replaceChildren();
+    addBubble(cat ? `${cat.name}のことだね。どんなことが気になってるにゃん？` : defaultChatMessage, "ai");
+  }
 }
 
 function createChatTargetChoice(cat) {
@@ -2916,6 +2917,7 @@ function createChatTargetChoice(cat) {
     photo.textContent = "🐾";
   }
   const name = document.createElement("span");
+  name.className = "chat-target-name";
   name.textContent = cat.name;
   button.append(photo, name);
   button.addEventListener("click", () => {
@@ -2941,6 +2943,9 @@ async function getSelectedChatCat() {
 
 async function openChatFromNavigation() {
   showView("chat");
+  chatLog.replaceChildren();
+  chatCurrentTarget.textContent = "";
+  chatCurrentTarget.hidden = true;
   const requestId = ++chatTargetRequestId;
   if (!isAuthenticated()) {
     setChatTargetHistory("none");
@@ -3009,12 +3014,8 @@ chatWithoutCat?.addEventListener("click", () => {
 
 window.NekoChat = { openForSelectedCat: openChatForSelectedCat, restoreConversation: restoreChatConversation, refreshAfterAuthChange: refreshChatAfterAuthChange };
 
-document.querySelectorAll("[data-chat]").forEach((button) => {
-  button.addEventListener("click", () => {
-    chatInput.value = button.dataset.chat;
-    chatInput.focus();
-  });
-});
+document.querySelector("#chatToSymptoms")?.addEventListener("click", () => showView("symptoms"));
+document.querySelector("#chatToMemo")?.addEventListener("click", () => showView("memo"));
 
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();

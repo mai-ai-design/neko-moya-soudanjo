@@ -222,8 +222,7 @@ p {
   font-size: 1.02rem;
 }
 
-.hero-actions,
-.example-chips {
+.hero-actions {
   display: grid;
   gap: 10px;
   margin-top: 24px;
@@ -300,7 +299,6 @@ p {
 .primary-btn:hover,
 .secondary-btn:hover,
 .ghost-btn:hover,
-.example-chips button:hover,
 .bottom-nav button:hover {
   transform: translateY(-1px);
 }
@@ -480,6 +478,21 @@ p {
   border-radius: 50%;
   object-fit: cover;
   animation: kinakoFloat 3s ease-in-out infinite;
+}
+
+.kinako-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.kinako-consult-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .kinako-speech {
@@ -1070,6 +1083,9 @@ textarea {
 }
 
 .chat-target-selection h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   color: var(--brown-strong);
   font-size: 1.05rem;
@@ -1094,6 +1110,8 @@ textarea {
   font: inherit;
   font-weight: 700;
   text-align: left;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .chat-target-choice:hover {
@@ -1109,6 +1127,13 @@ textarea {
   object-fit: cover;
 }
 
+.chat-target-name {
+  min-width: 0;
+  font-size: clamp(0.82rem, 3.4vw, 0.95rem);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
 .chat-target-placeholder {
   display: grid;
   place-items: center;
@@ -1120,6 +1145,8 @@ textarea {
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .chat-conversation {
@@ -1161,23 +1188,42 @@ textarea {
   color: #fffaf4;
 }
 
-.example-chips {
-  grid-template-columns: 1fr;
-  margin: 14px 0;
-}
-
-.example-chips button {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #fffdf8;
-  color: var(--brown);
-  padding: 9px 12px;
-  text-align: left;
-}
-
 .chat-form {
   display: grid;
   gap: 10px;
+}
+
+.chat-memo-guide {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.92);
+}
+
+.chat-memo-guide p {
+  margin: 0;
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.chat-memo-guide-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.chat-memo-guide-actions .ghost-btn {
+  min-height: 44px;
+  padding: 8px;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 480px) {
+  .chat-memo-guide-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .memo-output h2 {
@@ -1347,8 +1393,21 @@ textarea {
   margin-top: 12px;
 }
 
+#memo-title {
+  text-wrap: pretty;
+}
+
+@media (max-width: 639px) {
+  #memo-title {
+    max-width: 11.5em;
+    font-size: clamp(1.5rem, 7vw, 1.85rem);
+  }
+}
+
 @media (min-width: 640px) {
+  #memo-title,
   #hospital-memo-editor-title {
+    max-width: none;
     white-space: nowrap;
     font-size: clamp(2rem, 4vw, 2.8rem);
   }
@@ -1514,9 +1573,6 @@ textarea {
     grid-column: 1 / -1;
   }
 
-  .example-chips {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 768px) {

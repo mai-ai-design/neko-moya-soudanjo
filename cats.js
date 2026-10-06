@@ -256,7 +256,7 @@
     section.append(list);
   }
 
-  function createDetailProfileSection(icon, title, rows, emptyText, actionLabel, action, chatLabel = "") {
+  function createDetailProfileSection(icon, title, rows, emptyText, actionLabel, action) {
     const section = element("section", "cat-detail-section");
     section.append(element("h2", "", `${icon} ${title}`));
     if (rows.length) {
@@ -268,13 +268,21 @@
     button.type = "button";
     button.addEventListener("click", action);
     section.append(button);
-    if (chatLabel) {
-      const chatButton = element("button", "ghost-btn cat-detail-chat-button", chatLabel);
-      chatButton.type = "button";
-      chatButton.addEventListener("click", openChatForSelectedCat);
-      section.append(chatButton);
-      if (!rows.length) section.append(element("p", "cat-detail-chat-note", "相談だけでも大丈夫だにゃん🐱"));
-    }
+    return section;
+  }
+
+  function createDetailChatSection(name) {
+    const section = element("section", "cat-detail-section cat-detail-chat-section");
+    section.append(element("h2", "", `${name}のことで気になることがある？`));
+    const button = element("button", "ghost-btn cat-detail-chat-button");
+    button.type = "button";
+    const icon = document.createElement("img");
+    icon.className = "kinako-icon";
+    icon.src = "assets/kinako.png";
+    icon.alt = "";
+    button.append(icon, element("span", "", "きなこに相談する"));
+    button.addEventListener("click", openChatForSelectedCat);
+    section.append(button);
     return section;
   }
 
@@ -1314,12 +1322,12 @@
     });
     const detailSections = element("div", "cat-detail-sections");
     detailSections.append(
-      createDetailProfileSection("🐾", `${cat.name}はこんな子`, aboutRows, "まだ詳しい情報はありません", aboutRows.length ? "✏️ 編集する" : "＋ 登録する", openAbout, `🐱 ${cat.name}のことをきなこに相談する`),
-      createDetailProfileSection("🩺", `${cat.name}の健康について`, healthRows, "まだ健康情報は登録されていません", healthRows.length ? "✏️ 編集する" : "＋ 登録する", openHealth, `🐱 ${cat.name}の体調をきなこに相談する`)
+      createDetailProfileSection("🐾", `${cat.name}はこんな子`, aboutRows, "まだ詳しい情報はありません", aboutRows.length ? "✏️ 編集する" : "＋ 登録する", openAbout),
+      createDetailProfileSection("🩺", `${cat.name}の健康について`, healthRows, "まだ健康情報は登録されていません", healthRows.length ? "✏️ 編集する" : "＋ 登録する", openHealth)
     );
     const memo = element("section", "cat-detail-section");
     memo.append(element("h2", "", `${cat.name}の病院メモ`), element("p", "", "まだ病院メモはありません🐾"));
-    detailSections.append(memo);
+    detailSections.append(memo, createDetailChatSection(cat.name));
     container.append(heading, detailSections, createBackButton());
     if (!cat.photo_path) return;
     try {
