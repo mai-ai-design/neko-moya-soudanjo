@@ -3394,6 +3394,11 @@ async function restoreViewFromHistory(viewId, historyState = {}) {
     return;
   }
 
+  if (viewId === "account") {
+    await openAccountSettings({ history: "none" });
+    return;
+  }
+
   if (viewId === "chat") {
     await window.NekoChat?.restoreConversation?.();
     return;
@@ -3511,11 +3516,13 @@ function setAuthMode(mode) {
 
 function updateAuthMenu() {
   const loginButton = document.querySelector("#authMenuLogin");
+  const accountButton = document.querySelector("#authMenuAccount");
   const logoutButton = document.querySelector("#authMenuLogout");
   if (loginButton && logoutButton) {
     loginButton.hidden = isAuthenticated();
     logoutButton.hidden = !isAuthenticated();
   }
+  if (accountButton) accountButton.hidden = !isAuthenticated();
   window.NekoCats?.onAuthChanged?.();
 }
 
@@ -3525,6 +3532,179 @@ function closeAuthMenu() {
   if (!panel || !button) return;
   panel.hidden = true;
   button.setAttribute("aria-expanded", "false");
+}
+
+function setAccountDeleteStatus(message = "") {
+  const status = document.querySelector("#accountDeleteStatus");
+  if (!status) return;
+  status.hidden = !message;
+  status.textContent = message;
+}
+
+function setAccountDeleteError(message = "") {
+  const error = document.querySelector("#accountDeleteError");
+  if (!error) return;
+  error.hidden = !message;
+  error.textContent = message;
+}
+
+function isAccountDeleteConfirmed() {
+  const input = document.querySelector("#accountDeleteName");
+  return input?.value.trim() === "退会します";
+}
+
+function updateAccountDeleteConfirmButton() {
+  const input = document.querySelector("#accountDeleteName");
+  const button = document.querySelector("#accountDeleteConfirmButton");
+  if (!input || !button) return;
+  button.disabled = input.disabled || !isAccountDeleteConfirmed();
+}
+
+function setAccountDeleteBusy(busy) {
+  const startButton = document.querySelector("#accountDeleteStart");
+  const input = document.querySelector("#accountDeleteName");
+  const cancelButton = document.querySelector("#accountDeleteCancelButton");
+  if (startButton) startButton.disabled = busy;
+  if (input) input.disabled = busy;
+  if (cancelButton) cancelButton.disabled = busy;
+  updateAccountDeleteConfirmButton();
+}
+
+function resetAccountDeleteConfirmation() {
+  const startButton = document.querySelector("#accountDeleteStart");
+  const confirm = document.querySelector("#accountDeleteConfirm");
+  const input = document.querySelector("#accountDeleteName");
+  const cancelButton = document.querySelector("#accountDeleteCancelButton");
+  if (!startButton || !confirm || !input || !cancelButton) return;
+  confirm.hidden = true;
+  startButton.hidden = false;
+  startButton.disabled = false;
+  input.value = "";
+  input.disabled = false;
+  cancelButton.disabled = false;
+  setAccountDeleteStatus();
+  setAccountDeleteError();
+  updateAccountDeleteConfirmButton();
+}
+
+async function openAccountSettings({ history = "push" } = {}) {
+  if (!isAuthenticated()) {
+    showView("home", { history, resetFlow: false });
+    return;
+  }
+
+  const email = document.querySelector("#accountUserEmail");
+  resetAccountDeleteConfirmation();
+  if (email) {
+    email.hidden = true;
+    email.textContent = "";
+  }
+  showView("account", { history, resetFlow: false });
+
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error) {
+    console.error("Account user lookup failed:", error);
+    return;
+  }
+  if (getActiveViewId() !== "account" || !data?.user?.email || !email) return;
+  email.textContent = data.user.email;
+  email.hidden = false;
+}
+
+async function openAccountDeleteConfirmation() {
+  if (!isAuthenticated()) {
+    showView("home", { history: "push", resetFlow: false });
+    return;
+  }
+
+  const startButton = document.querySelector("#accountDeleteStart");
+  const confirm = document.querySelector("#accountDeleteConfirm");
+  const input = document.querySelector("#accountDeleteName");
+  const catCount = document.querySelector("#accountDeleteCatCount");
+  if (!startButton || !confirm || !input || !catCount) return;
+
+  resetAccountDeleteConfirmation();
+  startButton.hidden = true;
+  confirm.hidden = false;
+  input.focus();
+
+  if (!supabaseClient) return;
+  const { count, error } = await supabaseClient.from("cats").select("id", { count: "exact", head: true });
+  if (error) {
+    console.error("Account deletion cat count failed:", error);
+    catCount.textContent = "登録したうちの子";
+    return;
+  }
+  catCount.textContent = `登録したうちの子（${count ?? 0}匹）`;
+}
+
+async function getAccountDeletionFailureStatus(data, error) {
+  if (typeof data?.status === "string") return data.status;
+  const response = error?.context;
+  if (response?.clone && typeof response.clone().json === "function") {
+    try {
+      const payload = await response.clone().json();
+      if (typeof payload?.status === "string") return payload.status;
+    } catch (responseError) {
+      // The user-facing message below intentionally stays generic.
+    }
+  }
+  if (error?.status === 401 || response?.status === 401) return "unauthorized";
+  return "";
+}
+
+async function deleteAccount() {
+  const input = document.querySelector("#accountDeleteName");
+  if (!input || !isAccountDeleteConfirmed()) return;
+  if (!supabaseClient || !isAuthenticated()) {
+    setAccountDeleteError("もう一度ログインしてから試してね");
+    return;
+  }
+
+  setAccountDeleteError();
+  setAccountDeleteStatus("退会の手続きをしているにゃん…");
+  setAccountDeleteBusy(true);
+
+  let data;
+  let error;
+  try {
+    ({ data, error } = await supabaseClient.functions.invoke("delete-account"));
+  } catch (invokeError) {
+    error = invokeError;
+  }
+
+  if (error || data?.status !== "success") {
+    if (error) console.error("Account deletion failed:", error);
+    const status = await getAccountDeletionFailureStatus(data, error);
+    if (status === "user_delete_failed") {
+      setAccountDeleteError("写真は削除されましたが、退会を完了できませんでした。時間をおいてもう一度試してね");
+    } else if (status === "unauthorized") {
+      setAccountDeleteError("もう一度ログインしてから試してね");
+    } else {
+      setAccountDeleteError("退会できませんでした。時間をおいてもう一度試してね");
+    }
+    setAccountDeleteStatus();
+    setAccountDeleteBusy(false);
+    return;
+  }
+
+  try {
+    const { error: signOutError } = await supabaseClient.auth.signOut();
+    if (signOutError) console.error("Account deletion sign-out failed:", signOutError);
+  } catch (signOutError) {
+    console.error("Account deletion sign-out failed:", signOutError);
+  }
+  clearAppState();
+  clearPendingAction();
+  try {
+    sessionStorage.removeItem("nekomoya_cat_form_mode");
+  } catch (storageError) {
+    // The account has already been deleted even if browser storage is unavailable.
+  }
+  resetAccountDeleteConfirmation();
+  showView("home", { history: "replace", resetFlow: false });
+  showToast("退会が完了しました。ご利用ありがとうございました。");
 }
 
 function requestAuthentication(action = null) {
@@ -3627,6 +3807,11 @@ document.querySelector("#authMenuButton")?.addEventListener("click", () => {
 
 document.querySelector("#authMenuLogin")?.addEventListener("click", () => requestAuthentication());
 
+document.querySelector("#authMenuAccount")?.addEventListener("click", async () => {
+  closeAuthMenu();
+  await openAccountSettings();
+});
+
 document.querySelector("#authMenuLogout")?.addEventListener("click", async () => {
   closeAuthMenu();
   if (!supabaseClient) return;
@@ -3640,6 +3825,11 @@ document.querySelector("#authMenuLogout")?.addEventListener("click", async () =>
   setActiveView("home", { history: "replace" });
   showToast("ログアウトしました。");
 });
+
+document.querySelector("#accountDeleteStart")?.addEventListener("click", openAccountDeleteConfirmation);
+document.querySelector("#accountDeleteName")?.addEventListener("input", updateAccountDeleteConfirmButton);
+document.querySelector("#accountDeleteCancelButton")?.addEventListener("click", resetAccountDeleteConfirmation);
+document.querySelector("#accountDeleteConfirmButton")?.addEventListener("click", deleteAccount);
 
 document.querySelector("#authModeToggle")?.addEventListener("click", () => {
   setAuthMode(authMode === "login" ? "signup" : "login");

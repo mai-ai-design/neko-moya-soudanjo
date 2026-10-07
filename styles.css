@@ -118,7 +118,7 @@ button {
   z-index: 5;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 112px;
+  min-width: 144px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -133,6 +133,10 @@ button {
   background: transparent;
   color: var(--brown);
   text-align: left;
+}
+
+#authMenuAccount {
+  white-space: nowrap;
 }
 
 .auth-menu-panel button:hover {
@@ -421,6 +425,96 @@ p {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.account-user-email {
+  margin-top: 6px;
+  color: var(--brown-strong);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.account-delete-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.account-delete-section h2,
+.account-delete-confirm h3 {
+  margin: 0;
+  color: var(--brown-strong);
+}
+
+.account-delete-section > .ghost-btn {
+  justify-self: start;
+}
+
+.account-delete-confirm {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+}
+
+.account-delete-confirm p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.account-delete-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.account-delete-summary p,
+.account-delete-confirm label {
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.account-delete-summary ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.account-delete-feedback {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--cream-deep);
+  color: var(--brown);
+  font-size: 0.9rem;
+}
+
+.account-delete-feedback.is-error {
+  background: #fff3f1;
+  color: #b84a4a;
+}
+
+.account-delete-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.account-delete-actions button {
+  min-height: 44px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.account-delete-actions #accountDeleteConfirmButton:disabled {
+  cursor: not-allowed;
+  background: #bda58f;
+  box-shadow: none;
+  opacity: 0.62;
 }
 
 .notice-card {

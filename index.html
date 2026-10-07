@@ -15,8 +15,8 @@
       rel="stylesheet"
     >
     <link rel="icon" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="styles.css?v=phase3d7a-1">
-    <link rel="stylesheet" href="cats.css?v=phase3d7a-2">
+    <link rel="stylesheet" href="styles.css?v=phase3d7b-2">
+    <link rel="stylesheet" href="cats.css?v=phase3d7b-1">
   </head>
   <body>
     <div class="app-shell">
@@ -31,6 +31,7 @@
             <button id="authMenuButton" class="auth-menu-button" type="button" aria-label="アカウントメニュー" aria-expanded="false">⚙</button>
             <div id="authMenuPanel" class="auth-menu-panel" hidden>
               <button id="authMenuLogin" type="button">ログイン</button>
+              <button id="authMenuAccount" type="button" hidden>アカウント設定</button>
               <button id="authMenuLogout" type="button" hidden>ログアウト</button>
             </div>
           </div>
@@ -2020,6 +2021,44 @@
           </div>
         </section>
 
+        <section id="account" class="view" aria-labelledby="account-title">
+          <div class="page-heading">
+            <p class="eyebrow">アカウント</p>
+            <h1 id="account-title">アカウント設定</h1>
+            <p>ログイン中のアカウント</p>
+            <p id="accountUserEmail" class="account-user-email" hidden></p>
+          </div>
+
+          <section class="account-delete-section" aria-labelledby="account-delete-heading">
+            <h2 id="account-delete-heading">ねこモヤを退会する</h2>
+            <button id="accountDeleteStart" class="ghost-btn" type="button">退会の手続きへ進む</button>
+
+            <div id="accountDeleteConfirm" class="account-delete-confirm" hidden>
+              <h3>ねこモヤを退会する？</h3>
+              <div class="account-delete-summary">
+                <p>削除されるもの</p>
+                <ul>
+                  <li id="accountDeleteCatCount">登録したうちの子</li>
+                  <li>健康情報</li>
+                  <li>登録した写真</li>
+                  <li>作成した病院メモ</li>
+                </ul>
+              </div>
+              <p>Googleアカウントやメールアドレス自体は削除されません。</p>
+              <p>ねこモヤとの連携と、ねこモヤに登録したデータが削除されます。</p>
+              <p>退会すると元に戻せないにゃん。</p>
+              <p>同じアカウントで登録し直しても、以前の記録は戻ってきません。</p>
+              <label>確認のため「退会します」と入力してね<input id="accountDeleteName" type="text" autocomplete="off"></label>
+              <p id="accountDeleteStatus" class="account-delete-feedback" aria-live="polite" hidden></p>
+              <p id="accountDeleteError" class="account-delete-feedback is-error" aria-live="polite" hidden></p>
+              <div class="account-delete-actions">
+                <button id="accountDeleteConfirmButton" class="primary-btn" type="button" disabled>退会する</button>
+                <button id="accountDeleteCancelButton" class="ghost-btn" type="button">やめる</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
         <section id="chat" class="view" aria-labelledby="chat-title">
           <div class="page-heading">
             <p class="eyebrow">きなこ相談</p>
@@ -2157,10 +2196,10 @@
     </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js?v=phase3d7a-1"></script>
-    <script src="script.js?v=phase3d7a-1"></script>
-    <script src="cat-photo-storage.js?v=phase3d7a-1"></script>
-    <script src="cat-photo-prepare.js?v=phase3d7a-1"></script>
-    <script src="cats.js?v=phase3d7a-1"></script>
+    <script src="config.js?v=phase3d7b-1"></script>
+    <script src="script.js?v=phase3d7b-1"></script>
+    <script src="cat-photo-storage.js?v=phase3d7b-1"></script>
+    <script src="cat-photo-prepare.js?v=phase3d7b-1"></script>
+    <script src="cats.js?v=phase3d7b-1"></script>
   </body>
 </html>
