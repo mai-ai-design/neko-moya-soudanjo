@@ -15,8 +15,8 @@
       rel="stylesheet"
     >
     <link rel="icon" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="styles.css?v=phase3d6-5">
-    <link rel="stylesheet" href="cats.css?v=phase3d6-2">
+    <link rel="stylesheet" href="styles.css?v=phase3d7a-1">
+    <link rel="stylesheet" href="cats.css?v=phase3d7a-1">
   </head>
   <body>
     <div class="app-shell">
@@ -1887,6 +1887,33 @@
             <p id="catRegisterError" class="cat-form-error" aria-live="polite" hidden></p>
             <button id="catRegisterSubmit" class="primary-btn" type="submit">🐾 この子を登録する</button>
           </form>
+          <section id="catDeleteSection" class="cat-delete-section" hidden>
+            <h2>うちの子の登録について</h2>
+            <button id="catDeleteStart" class="ghost-btn cat-delete-start" type="button">この子の登録を削除する</button>
+            <div id="catDeleteConfirm" class="cat-delete-confirm" hidden>
+              <h3 id="catDeleteTitle"></h3>
+              <div class="cat-delete-summary">
+                <p>削除されるもの</p>
+                <ul>
+                  <li id="catDeleteBasicText"></li>
+                  <li id="catDeleteHealthText"></li>
+                  <li id="catDeletePhotoText"></li>
+                </ul>
+              </div>
+              <div class="cat-delete-summary">
+                <p>残るもの</p>
+                <ul><li id="catDeleteMemoText"></li></ul>
+              </div>
+              <p>削除すると元に戻せないにゃん。</p>
+              <label>確認のため、お名前を入力してね<input id="catDeleteName" type="text" autocomplete="off"></label>
+              <p id="catDeleteStatus" class="cat-status" aria-live="polite" hidden></p>
+              <p id="catDeleteError" class="cat-form-error" aria-live="polite" hidden></p>
+              <div class="cat-delete-actions">
+                <button id="catDeleteConfirmButton" class="primary-btn" type="button" disabled>削除する</button>
+                <button id="catDeleteCancelButton" class="ghost-btn" type="button">やめる</button>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section id="cat-welcome" class="view" aria-labelledby="cat-welcome-title">
@@ -2130,10 +2157,10 @@
     </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js?v=phase3d6-2"></script>
-    <script src="script.js?v=phase3d6-2"></script>
-    <script src="cat-photo-storage.js?v=phase3d6-2"></script>
-    <script src="cat-photo-prepare.js?v=phase3d6-2"></script>
-    <script src="cats.js?v=phase3d6-2"></script>
+    <script src="config.js?v=phase3d7a-1"></script>
+    <script src="script.js?v=phase3d7a-1"></script>
+    <script src="cat-photo-storage.js?v=phase3d7a-1"></script>
+    <script src="cat-photo-prepare.js?v=phase3d7a-1"></script>
+    <script src="cats.js?v=phase3d7a-1"></script>
   </body>
 </html>

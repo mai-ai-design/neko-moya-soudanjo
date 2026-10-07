@@ -35,6 +35,19 @@
   const registerBackButton = document.querySelector("#catRegisterBack");
   const registerPhotoFieldset = document.querySelector(".cat-register-photo-fieldset");
   const registerLoadState = document.querySelector("#catRegisterLoadState");
+  const deleteSection = document.querySelector("#catDeleteSection");
+  const deleteStartButton = document.querySelector("#catDeleteStart");
+  const deleteConfirm = document.querySelector("#catDeleteConfirm");
+  const deleteTitle = document.querySelector("#catDeleteTitle");
+  const deleteBasicText = document.querySelector("#catDeleteBasicText");
+  const deleteHealthText = document.querySelector("#catDeleteHealthText");
+  const deletePhotoText = document.querySelector("#catDeletePhotoText");
+  const deleteMemoText = document.querySelector("#catDeleteMemoText");
+  const deleteNameInput = document.querySelector("#catDeleteName");
+  const deleteStatus = document.querySelector("#catDeleteStatus");
+  const deleteError = document.querySelector("#catDeleteError");
+  const deleteConfirmButton = document.querySelector("#catDeleteConfirmButton");
+  const deleteCancelButton = document.querySelector("#catDeleteCancelButton");
   const birthYearInput = document.querySelector("#catBirthYearInput");
   const birthMonthInput = document.querySelector("#catBirthMonthInput");
   const birthDayInput = document.querySelector("#catBirthDayInput");
@@ -55,6 +68,7 @@
   let initialAgeFormState = null;
   let confirmedOldBirthYear = null;
   let savedOldBirthYear = null;
+  let deletingCat = false;
   let lastAuthUserId = undefined;
   let authChangeHandled = false;
 
@@ -76,6 +90,14 @@
   function saveSelectedCatId(id) {
     try {
       sessionStorage.setItem(SELECTED_CAT_STORAGE_KEY, id);
+    } catch (error) {
+      // The current screen remains usable when session storage is unavailable.
+    }
+  }
+
+  function clearSelectedCatId() {
+    try {
+      sessionStorage.removeItem(SELECTED_CAT_STORAGE_KEY);
     } catch (error) {
       // The current screen remains usable when session storage is unavailable.
     }
@@ -450,6 +472,8 @@
     registerTitle.textContent = editing && editingCatName ? `${editingCatName}の基本情報` : "まずはこの子のことを教えてね🐾";
     registerPhotoFieldset.hidden = editing;
     registerBackButton.textContent = editing && editingCatName ? `${editingCatName}のページへ戻る` : "うちの子たちへ戻る";
+    deleteSection.hidden = !editing || form.hidden;
+    if (!editing) resetCatDeleteConfirmation();
     updateRegisterButton();
   }
 
@@ -488,6 +512,121 @@
     showFieldError("#catRegisterError");
     updateDependentFields();
     updateRegisterPresentation();
+  }
+
+  function showCatDeleteStatus(message = "") {
+    deleteStatus.textContent = message;
+    deleteStatus.hidden = !message;
+  }
+
+  function showCatDeleteError(message = "") {
+    deleteError.textContent = message;
+    deleteError.hidden = !message;
+  }
+
+  function isDeleteNameConfirmed() {
+    return Boolean(editingCatName) && deleteNameInput.value.trim() === editingCatName;
+  }
+
+  function updateCatDeleteConfirmButton() {
+    deleteConfirmButton.disabled = deletingCat || !isDeleteNameConfirmed();
+  }
+
+  function resetCatDeleteConfirmation() {
+    deletingCat = false;
+    deleteConfirm.hidden = true;
+    deleteStartButton.hidden = false;
+    deleteStartButton.disabled = false;
+    deleteNameInput.value = "";
+    deleteNameInput.disabled = false;
+    deleteCancelButton.disabled = false;
+    showCatDeleteStatus();
+    showCatDeleteError();
+    updateCatDeleteConfirmButton();
+  }
+
+  function openCatDeleteConfirmation() {
+    if (catFormMode !== "edit" || !editingCatId || !editingCatName) return;
+    resetCatDeleteConfirmation();
+    deleteTitle.textContent = `${editingCatName}の登録を削除する？`;
+    deleteBasicText.textContent = `${editingCatName}の基本情報`;
+    deleteHealthText.textContent = `${editingCatName}の健康情報`;
+    deletePhotoText.textContent = `${editingCatName}の登録した写真`;
+    deleteMemoText.textContent = `作成済みの病院メモ（${editingCatName}の過去の記録として残ります）`;
+    deleteStartButton.hidden = true;
+    deleteConfirm.hidden = false;
+    deleteNameInput.focus();
+  }
+
+  function setCatDeleteBusy(busy) {
+    deletingCat = busy;
+    deleteStartButton.disabled = busy;
+    deleteNameInput.disabled = busy;
+    deleteCancelButton.disabled = busy;
+    setRegisterPhotoControlsDisabled(busy);
+    updateCatDeleteConfirmButton();
+  }
+
+  async function deleteEditedCat() {
+    if (deletingCat || !isDeleteNameConfirmed()) return;
+    const catId = editingCatId;
+    const catName = editingCatName;
+    if (!catId || !catName) return;
+    if (!isAuthenticated() || !supabaseClient) {
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !userData.user) {
+      console.error("Cat deletion user lookup failed:", userError);
+      requestAuthentication({ type: "register_cat" });
+      return;
+    }
+
+    setCatDeleteBusy(true);
+    showCatDeleteError();
+    showCatDeleteStatus("削除しているにゃん…");
+    const folderPath = `${userData.user.id}/${catId}`;
+    const storage = supabaseClient.storage.from(CatPhotoStorage.BUCKET);
+
+    try {
+      const { data: files, error: listError } = await storage.list(folderPath);
+      if (listError) throw listError;
+      const paths = (files || []).map((file) => `${folderPath}/${file.name}`);
+      if (paths.length) {
+        const { error: removeError } = await storage.remove(paths);
+        if (removeError) throw removeError;
+      }
+    } catch (error) {
+      console.error("Cat photo storage cleanup failed:", error);
+      showCatDeleteStatus();
+      showCatDeleteError("削除できなかったにゃん。時間をおいてもう一度試してね");
+      setCatDeleteBusy(false);
+      return;
+    }
+
+    const { data: deletedCat, error: deleteError } = await supabaseClient
+      .from("cats")
+      .delete()
+      .eq("id", catId)
+      .select("id")
+      .maybeSingle();
+    if (deleteError || !deletedCat) {
+      console.error("Cat record deletion failed:", deleteError || new Error("Cat record was not deleted."));
+      showCatDeleteStatus();
+      showCatDeleteError("写真は削除されましたが、登録を削除できませんでした。時間をおいてもう一度試してね");
+      setCatDeleteBusy(false);
+      return;
+    }
+
+    clearSelectedCatId();
+    setRegisterPhotoControlsDisabled(false);
+    setCatFormMode("create");
+    resetCatDeleteConfirmation();
+    await refreshProfileButton();
+    showToast(`${catName}の登録を削除しました`);
+    openCats();
   }
 
   async function handleRegisterPhotoSelection() {
@@ -795,6 +934,7 @@
     resetRegisterForm();
     setView("cat-register", { history });
     form.hidden = true;
+    deleteSection.hidden = true;
     showLoading(registerLoadState, "基本情報を呼んでいるにゃん…");
     const { data: cat, error } = await supabaseClient
       .from("cats")
@@ -814,6 +954,7 @@
     showFieldError("#catNeuterError");
     showFieldError("#catRegisterError");
     form.hidden = false;
+    updateRegisterPresentation();
   }
 
   function handleRegisterBack() {
@@ -1527,6 +1668,10 @@
     }
   });
   registerBackButton?.addEventListener("click", handleRegisterBack);
+  deleteStartButton?.addEventListener("click", openCatDeleteConfirmation);
+  deleteNameInput?.addEventListener("input", updateCatDeleteConfirmButton);
+  deleteCancelButton?.addEventListener("click", resetCatDeleteConfirmation);
+  deleteConfirmButton?.addEventListener("click", deleteEditedCat);
   document.querySelector("#catHealthSkip")?.addEventListener("click", openDetail);
   document.querySelector("#catAboutSkip")?.addEventListener("click", openDetail);
   nameInput?.addEventListener("input", () => {

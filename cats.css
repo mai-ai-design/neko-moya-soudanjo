@@ -212,6 +212,86 @@
   margin-top: 0;
 }
 
+.cat-delete-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.cat-delete-section h2,
+.cat-delete-confirm h3 {
+  margin: 0;
+  color: var(--brown-strong);
+}
+
+.cat-delete-start {
+  justify-self: start;
+  min-height: 44px;
+  border-color: var(--line);
+}
+
+.cat-delete-confirm {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+}
+
+.cat-delete-confirm p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.cat-delete-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.cat-delete-summary p {
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.cat-delete-summary ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.cat-delete-confirm label {
+  display: grid;
+  gap: 6px;
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.cat-delete-confirm .cat-status,
+.cat-delete-confirm .cat-form-error {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.cat-delete-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cat-delete-actions button {
+  min-height: 44px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
 .cat-register-form label,
 .cat-choice-row label,
 .cat-choice-stack label {
