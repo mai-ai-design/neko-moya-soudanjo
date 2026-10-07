@@ -292,6 +292,13 @@
   padding-left: 8px;
 }
 
+.cat-delete-actions #catDeleteConfirmButton:disabled {
+  cursor: not-allowed;
+  background: #bda58f;
+  box-shadow: none;
+  opacity: 0.62;
+}
+
 .cat-register-form label,
 .cat-choice-row label,
 .cat-choice-stack label {
