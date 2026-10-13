@@ -720,6 +720,17 @@
     return precision === "exact" ? value : `推定 ${value}`;
   }
 
+  function getHospitalMemoEstimatedAge(cat) {
+    if (cat.birth_date_precision !== "estimated") return "";
+    const start = parseLocalDate(cat.birth_date_estimated);
+    if (!start) return "";
+    const today = todayParts();
+    let months = (today.year - start.year) * 12 + (today.month - start.month);
+    if (today.day < start.day) months -= 1;
+    if (months < 0) return "";
+    return months < 12 ? `生後${months}か月` : `${Math.floor(months / 12)}歳`;
+  }
+
   function birthLabel(cat) {
     if (cat.birth_date_precision === "exact") {
       const date = parseLocalDate(cat.birth_date);
@@ -838,6 +849,63 @@
     } catch (photoError) {
       return cats;
     }
+  }
+
+  function formatHospitalMemoWeight(value) {
+    if (value === null || value === undefined || value === "") return "";
+    const number = Number(value);
+    return Number.isFinite(number) ? `${number}kg` : "";
+  }
+
+  async function getCatForHospitalMemo(catId) {
+    if (!isAuthenticated() || !supabaseClient) return null;
+    const { data: cat, error: catError } = await supabaseClient
+      .from("cats")
+      .select("id, name, breed, sex, birth_date, birth_date_estimated, birth_date_precision, neuter_status, photo_path")
+      .eq("id", catId)
+      .maybeSingle();
+    if (catError || !cat) {
+      if (catError) console.error("Hospital memo cat loading failed:", catError);
+      return null;
+    }
+
+    const { data: healthProfile, error: healthError } = await supabaseClient
+      .from("cat_health_profiles")
+      .select("cat_id, current_weight_kg, chronic_conditions, medications, allergies")
+      .eq("cat_id", catId)
+      .maybeSingle();
+    if (healthError) console.error("Hospital memo health profile loading failed:", healthError);
+
+    const precision = cat.birth_date_precision;
+    const exactBirthdate = precision === "exact" && parseLocalDate(cat.birth_date) ? cat.birth_date : "";
+    const estimatedAge = precision === "estimated"
+      ? getHospitalMemoEstimatedAge(cat)
+      : precision === "year_only"
+        ? (() => {
+          const date = parseLocalDate(cat.birth_date_estimated);
+          return date ? `${date.year}年生まれ` : "";
+        })()
+        : "";
+    const sex = cat.sex === "male" ? "オス" : cat.sex === "female" ? "メス" : "";
+    const neuter = cat.neuter_status === "done" ? "避妊・去勢済み" : cat.neuter_status === "not_done" ? "未実施" : "";
+
+    return {
+      catId: cat.id,
+      photoPath: cat.photo_path || "",
+      basic: {
+        name: cat.name || "",
+        breed: cat.breed || "",
+        sex,
+        neuter,
+        birthdate: exactBirthdate,
+        estimatedAge,
+        weight: healthError ? "" : formatHospitalMemoWeight(healthProfile?.current_weight_kg),
+        conditions: healthError ? "" : healthProfile?.chronic_conditions || "",
+        allergies: healthError ? "" : healthProfile?.allergies || "",
+        medicines: healthError ? "" : healthProfile?.medications || ""
+      },
+      healthLoadFailed: Boolean(healthError)
+    };
   }
 
   function openRegister({ history = "push" } = {}) {
@@ -1636,6 +1704,7 @@
     lastAuthUserId = userId;
     refreshProfileButton();
     window.NekoChat?.refreshAfterAuthChange?.();
+    window.NekoHospitalMemo?.refreshCatPickerAfterAuthChange?.();
     const activeView = document.querySelector(".view.is-active")?.id;
     if (!catViewIds.has(activeView)) return;
     if (!isAuthenticated()) {
@@ -1729,7 +1798,7 @@
   });
 
   renderAboutOptions();
-  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout, leaveForHistoryNavigation, getSelectedCatId, saveSelectedCatId, getChatCats };
+  window.NekoCats = { onAuthChanged, openRegister, openCats, openDetail, openBasicEdit, openHealth, openAbout, leaveForHistoryNavigation, getSelectedCatId, saveSelectedCatId, getChatCats, getCatForHospitalMemo };
   if (hasResolvedInitialAuth()) {
     onAuthChanged();
   }

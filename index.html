@@ -15,7 +15,7 @@
       rel="stylesheet"
     >
     <link rel="icon" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="styles.css?v=phase3d7b-2">
+    <link rel="stylesheet" href="styles.css?v=phase3d8a-1">
     <link rel="stylesheet" href="cats.css?v=phase3d7b-1">
   </head>
   <body>
@@ -2116,12 +2116,27 @@
             <p>内容を確認して、必要なところだけ書き足せます。</p>
           </div>
           <form id="hospitalMemoForm" class="form-card">
+            <div id="hospitalCatPicker" class="hospital-cat-picker" hidden>
+              <label>🐾 うちの子情報を使う<select id="hospitalCatSelect"><option value="">猫を選ぶ</option></select></label>
+              <small class="hospital-cat-picker-help">登録した内容を基本情報に入れるにゃん。体温は空欄になるから、その日の値を入れてね🐾</small>
+              <small id="hospitalCatPickerError" class="hospital-cat-picker-error" aria-live="polite" hidden></small>
+            </div>
+            <div id="hospitalCatOverwriteConfirm" class="hospital-cat-overwrite-confirm" hidden>
+              <p id="hospitalCatOverwriteText"></p>
+              <p>猫の基本情報は入れ替わります。<br>今回の相談内容はそのまま残ります。</p>
+              <div class="hospital-cat-overwrite-actions">
+                <button id="hospitalCatOverwriteApply" class="primary-btn" type="button">読み込む</button>
+                <button id="hospitalCatOverwriteCancel" class="ghost-btn" type="button">やめる</button>
+              </div>
+            </div>
+            <p id="hospitalCatSwitchNotice" class="hospital-cat-switch-notice" aria-live="polite" hidden></p>
             <fieldset>
               <legend>猫の基本情報</legend>
               <div class="two-column hospital-basic-fields">
                 <label>名前<input id="hospitalName" name="name" type="text"></label>
                 <label>猫種<input id="hospitalBreed" name="breed" type="text"></label>
                 <label>性別<input id="hospitalSex" name="sex" type="text"></label>
+                <label>避妊・去勢<input id="hospitalNeuter" name="neuter" type="text" placeholder="例：避妊・去勢済み"></label>
                 <div class="wide hospital-birthdate-field">
                   <span class="hospital-birthdate-label">生年月日</span>
                   <div class="hospital-birthdate-fields" role="group" aria-label="生年月日">
@@ -2135,10 +2150,11 @@
                   <small id="hospitalAgePreview" class="hospital-age-preview" aria-live="polite" hidden></small>
                   <small class="hospital-birthdate-help">生年月日が分からない場合は、推定年齢だけでも大丈夫です。</small>
                 </div>
-                <label>推定年齢<input id="hospitalEstimatedAge" name="estimatedAge" type="text" placeholder="例：8歳"></label>
+                <label>推定年齢<input id="hospitalEstimatedAge" name="estimatedAge" type="text" placeholder="例：8歳 / 2020年生まれ"></label>
                 <label>現在の体重<input id="hospitalWeight" name="weight" type="text" placeholder="例：4.2kg"></label>
                 <label>体温<input id="hospitalTemperature" name="temperature" type="text" placeholder="例：38.5℃"></label>
                 <label>持病<textarea id="hospitalConditions" name="conditions" rows="3"></textarea></label>
+                <label>アレルギー<textarea id="hospitalAllergies" name="allergies" rows="3"></textarea></label>
                 <label class="wide">現在使用している薬<textarea id="hospitalMedicines" name="medicines" rows="3"></textarea></label>
               </div>
             </fieldset>
@@ -2197,9 +2213,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js?v=phase3d7b-1"></script>
-    <script src="script.js?v=phase3d7b-1"></script>
+    <script src="script.js?v=phase3d8a-6"></script>
     <script src="cat-photo-storage.js?v=phase3d7b-1"></script>
     <script src="cat-photo-prepare.js?v=phase3d7b-1"></script>
-    <script src="cats.js?v=phase3d7b-1"></script>
+    <script src="cats.js?v=phase3d8a-2"></script>
   </body>
 </html>
