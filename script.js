@@ -1924,6 +1924,10 @@ document.querySelectorAll(".nav-link").forEach((button) => {
       openChatFromNavigation();
       return;
     }
+    if (button.dataset.view === "hospital-memo-top") {
+      openHospitalMemoTop();
+      return;
+    }
     showView(button.dataset.view);
   });
 });
@@ -1948,7 +1952,7 @@ function setActiveView(viewId, { scroll = true, history = "none", historyState =
   });
   const navViewId = ["vomit-detail", "appetite-detail", "poop-detail", "urine-detail", "water-detail", "energy-detail", "breathing-detail", "eye-detail", "ear-detail", "mouth-detail", "skin-detail", "movement-detail", "weight-detail", "acute-detail", "vomit-check"].includes(viewId)
     ? "symptoms"
-    : ["hospital-memo-editor", "hospital-memo-display"].includes(viewId) ? "memo" : viewId;
+    : ["memo", "hospital-memo-editor", "hospital-memo-display"].includes(viewId) ? "hospital-memo-top" : viewId;
   document.querySelectorAll(".bottom-nav .nav-link").forEach((button) => {
     button.classList.toggle("is-current", button.dataset.view === navViewId);
   });
@@ -2440,11 +2444,11 @@ document.querySelector("#acuteRecordBack")?.addEventListener("click", () => {
 });
 
 document.querySelector("#acuteMemoCreate")?.addEventListener("click", () => {
-  startHospitalMemoFromAcute();
+  requestHospitalMemoFromAcute();
 });
 
 document.querySelector("#hospitalMemoCreate")?.addEventListener("click", () => {
-  startHospitalMemoFromFlow(currentFlowKey);
+  requestHospitalMemoFromFlow(currentFlowKey);
 });
 
 document.querySelector("#triageForm").addEventListener("submit", (event) => {
@@ -2593,6 +2597,99 @@ function startHospitalMemoFromManual(form) {
     .filter((entry) => entry.value);
   const groups = entries.length ? [{ title: "今回の症状・相談内容", entries }] : [];
   startHospitalMemo("manual", groups, data.get("question")?.trim() || "");
+}
+
+function hasHospitalMemoStateContent() {
+  if (hospitalMemoState.groups.some((group) => group.entries.some((entry) => String(entry.value || "").trim()))) return true;
+
+  return Boolean(String(hospitalMemoState.additional || "").trim() || String(hospitalMemoState.questions || "").trim());
+}
+
+function hasManualMemoDraft() {
+  const form = document.querySelector("#memoForm");
+  if (!form) return false;
+
+  return memoFields.some(([id]) => String(form.elements[id]?.value || "").trim());
+}
+
+function hasHospitalMemoDraft() {
+  return hasHospitalMemoStateContent() || hasHospitalMemoConsultationContent() || hasManualMemoDraft();
+}
+
+function renderHospitalMemoTop() {
+  const card = document.querySelector("#hospitalMemoDraftCard");
+  if (card) card.hidden = !hasHospitalMemoDraft();
+
+  closeHospitalMemoNewConfirm();
+}
+
+function openHospitalMemoTop({ history = "push" } = {}) {
+  renderHospitalMemoTop();
+  showView("hospital-memo-top", { history, resetFlow: false });
+}
+
+function openHospitalMemoNewConfirm(mode, flowKey = "") {
+  const confirm = document.querySelector("#hospitalMemoNewConfirm");
+  const text = document.querySelector("#hospitalMemoNewConfirmText");
+  const discard = document.querySelector("#hospitalMemoNewConfirmDiscard");
+  if (!confirm || !text || !discard) return;
+
+  text.textContent = mode === "flow" || mode === "acute"
+    ? "今回の症状から新しいメモを作りますか？"
+    : "新しいメモを作りますか？";
+  discard.textContent = mode === "flow" || mode === "acute"
+    ? "今回の症状から新しく作る"
+    : "新しいメモを作る";
+  discard.dataset.mode = mode;
+  discard.dataset.flowKey = flowKey;
+  confirm.hidden = false;
+}
+
+function closeHospitalMemoNewConfirm() {
+  const confirm = document.querySelector("#hospitalMemoNewConfirm");
+  const discard = document.querySelector("#hospitalMemoNewConfirmDiscard");
+  if (confirm) confirm.hidden = true;
+  if (discard) {
+    delete discard.dataset.mode;
+    delete discard.dataset.flowKey;
+  }
+}
+
+function discardCurrentHospitalMemo() {
+  resetHospitalMemoState();
+  resetManualMemoForm();
+  saveAppState();
+}
+
+function openNewHospitalMemoStep() {
+  // Phase 4A-1：相談内容の入力から始める
+  // Phase 4A-2：ここを猫ちゃん選択画面に差し替える予定
+  showView("memo");
+}
+
+function startNewHospitalMemo() {
+  discardCurrentHospitalMemo();
+  openNewHospitalMemoStep();
+}
+
+function requestHospitalMemoFromFlow(flowKey) {
+  if (hasHospitalMemoDraft()) {
+    openHospitalMemoTop({ history: "push" });
+    openHospitalMemoNewConfirm("flow", flowKey);
+    return;
+  }
+
+  startHospitalMemoFromFlow(flowKey);
+}
+
+function requestHospitalMemoFromAcute() {
+  if (hasHospitalMemoDraft()) {
+    openHospitalMemoTop({ history: "push" });
+    openHospitalMemoNewConfirm("acute");
+    return;
+  }
+
+  startHospitalMemoFromAcute();
 }
 
 let hospitalBirthdatePickerFallback = false;
@@ -2785,13 +2882,34 @@ function getHospitalCatPickerElements() {
   return {
     picker: document.querySelector("#hospitalCatPicker"),
     select: document.querySelector("#hospitalCatSelect"),
+    selectField: document.querySelector("#hospitalCatSelectField"),
+    help: document.querySelector("#hospitalCatPickerHelp"),
+    emptyGuide: document.querySelector("#hospitalCatPickerEmpty"),
+    signedOutGuide: document.querySelector("#hospitalCatPickerSignedOut"),
     error: document.querySelector("#hospitalCatPickerError"),
     overwriteConfirm: document.querySelector("#hospitalCatOverwriteConfirm"),
     overwriteText: document.querySelector("#hospitalCatOverwriteText"),
+    overwriteDetail: document.querySelector("#hospitalCatOverwriteDetail"),
     overwriteApply: document.querySelector("#hospitalCatOverwriteApply"),
     overwriteCancel: document.querySelector("#hospitalCatOverwriteCancel"),
     switchNotice: document.querySelector("#hospitalCatSwitchNotice")
   };
+}
+
+function applyHospitalCatPickerMode({ isSignedIn, hasCats }) {
+  const { selectField, help, emptyGuide, signedOutGuide } = getHospitalCatPickerElements();
+  if (selectField) selectField.hidden = !isSignedIn;
+  if (help) help.hidden = !isSignedIn;
+  if (emptyGuide) emptyGuide.hidden = !(isSignedIn && !hasCats);
+  if (signedOutGuide) signedOutGuide.hidden = isSignedIn;
+}
+
+function resetHospitalCatPickerGuide() {
+  const { selectField, help, emptyGuide, signedOutGuide } = getHospitalCatPickerElements();
+  if (selectField) selectField.hidden = false;
+  if (help) help.hidden = false;
+  if (emptyGuide) emptyGuide.hidden = true;
+  if (signedOutGuide) signedOutGuide.hidden = true;
 }
 
 function setHospitalCatPickerError(message = "") {
@@ -2808,8 +2926,19 @@ function resetHospitalCatSwitchNotice() {
   switchNotice.textContent = "";
 }
 
+function setHospitalCatOverwriteMode(isManual) {
+  const { overwriteDetail, overwriteApply } = getHospitalCatPickerElements();
+  if (overwriteDetail) {
+    overwriteDetail.innerHTML = isManual ? HOSPITAL_MANUAL_CAT_OVERWRITE_DETAIL : HOSPITAL_CAT_OVERWRITE_DETAIL;
+  }
+  if (overwriteApply) {
+    overwriteApply.textContent = isManual ? HOSPITAL_MANUAL_CAT_APPLY_LABEL : HOSPITAL_CAT_OVERWRITE_APPLY_LABEL;
+  }
+}
+
 function closeHospitalCatOverwriteConfirm() {
   const { overwriteConfirm, overwriteApply, select } = getHospitalCatPickerElements();
+  setHospitalCatOverwriteMode(false);
   if (overwriteConfirm) overwriteConfirm.hidden = true;
   if (overwriteApply) {
     delete overwriteApply.dataset.catId;
@@ -2840,13 +2969,31 @@ function showHospitalCatSwitchNotice(name) {
   switchNotice.hidden = false;
 }
 
+function formatHospitalMemoCatName(name) {
+  const trimmed = String(name || "").trim();
+  if (!trimmed) return "";
+  return /(ちゃん|チャン|くん|クン|君|さん|サン|様|ちゃま)$/.test(trimmed) ? trimmed : `${trimmed}ちゃん`;
+}
+
+function renderHospitalMemoCatLabel() {
+  const label = document.querySelector("#hospitalMemoCatLabel");
+  if (!label) return;
+  const form = document.querySelector("#hospitalMemoForm");
+  const name = hospitalMemoState.catId ? String(form?.elements.name?.value || "").trim() : "";
+  const display = formatHospitalMemoCatName(name);
+  label.hidden = !display;
+  label.textContent = display ? `🐾 ${display}の病院メモを作成中` : "";
+}
+
 async function renderHospitalCatPicker() {
+  renderHospitalMemoCatLabel();
   const requestId = ++hospitalCatPickerRequestId;
   const { picker, select } = getHospitalCatPickerElements();
   if (!picker || !select) return;
   closeHospitalCatOverwriteConfirm();
   picker.hidden = true;
-  select.replaceChildren(new Option("猫を選ぶ", ""));
+  resetHospitalCatPickerGuide();
+  select.replaceChildren(new Option("猫ちゃんを選ぶ", ""));
 
   if (!window.NekoCats?.getChatCats) {
     window.setTimeout(() => {
@@ -2858,9 +3005,11 @@ async function renderHospitalCatPicker() {
   try {
     const cats = await window.NekoCats.getChatCats();
     if (requestId !== hospitalCatPickerRequestId || getActiveViewId() !== "hospital-memo-editor") return;
-    if (!cats.length) return;
+    const isSignedIn = Boolean(getAuthenticatedUserId());
     cats.forEach((cat) => select.add(new Option(cat.name, cat.id)));
+    if (isSignedIn) select.add(new Option("✏️ 未登録の猫ちゃん", HOSPITAL_MANUAL_CAT_ID));
     select.value = hospitalMemoState.catId;
+    applyHospitalCatPickerMode({ isSignedIn, hasCats: cats.length > 0 });
     picker.hidden = false;
   } catch (error) {
     if (requestId !== hospitalCatPickerRequestId || getActiveViewId() !== "hospital-memo-editor") return;
@@ -2889,6 +3038,40 @@ function applyHospitalCatBasicInformation(catInfo) {
   hospitalMemoState.basic.temperature = "";
   hospitalMemoState.catId = catInfo.catId;
   hospitalMemoState.photoPath = catInfo.photoPath;
+  renderHospitalMemoCatLabel();
+}
+
+function showHospitalManualCatNotice() {
+  const { switchNotice } = getHospitalCatPickerElements();
+  if (!switchNotice) return;
+  switchNotice.innerHTML = "未登録の猫ちゃんに切り替えました。<br>猫ちゃんの基本情報は空にしたので、手入力してね🐾<br>今回の相談内容はそのまま残しています。<br>別の猫ちゃんの症状が混ざっていないか、確認してくださいね。";
+  switchNotice.hidden = false;
+}
+
+function applyHospitalManualCatSelection({ switched = false, hadConsultationContent = false } = {}) {
+  const form = document.querySelector("#hospitalMemoForm");
+  if (!form) return;
+  HOSPITAL_MEMO_BASIC_KEYS.forEach((key) => {
+    const field = form.elements[key];
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+      field.value = "";
+    }
+  });
+  resetHospitalBirthdatePicker();
+  syncHospitalBirthControlsFromDate();
+  updateHospitalAgePreview();
+  hospitalMemoState.basic = Object.fromEntries(HOSPITAL_MEMO_BASIC_KEYS.map((key) => [key, ""]));
+  hospitalMemoState.catId = HOSPITAL_MANUAL_CAT_ID;
+  hospitalMemoState.photoPath = "";
+  renderHospitalMemoCatLabel();
+  const { select } = getHospitalCatPickerElements();
+  if (select) select.value = HOSPITAL_MANUAL_CAT_ID;
+  if (switched && hadConsultationContent) {
+    showHospitalManualCatNotice();
+  } else {
+    showToast("猫ちゃんの基本情報を空にしたにゃん。手入力してね🐾");
+  }
+  saveAppState();
 }
 
 async function loadHospitalCatInformation(catId, { switched = false, hadConsultationContent = false } = {}) {
@@ -2940,12 +3123,22 @@ function requestHospitalCatInformation(catId) {
   const hadConsultationContent = hasHospitalMemoConsultationContent();
   if (!shouldConfirm) {
     resetHospitalCatSwitchNotice();
+    if (catId === HOSPITAL_MANUAL_CAT_ID) {
+      applyHospitalManualCatSelection({ hadConsultationContent });
+      return;
+    }
     loadHospitalCatInformation(catId, { hadConsultationContent });
     return;
   }
 
+  const isManual = catId === HOSPITAL_MANUAL_CAT_ID;
   const selectedName = select.selectedOptions[0]?.textContent || "この子";
-  if (overwriteText) overwriteText.innerHTML = `🐾 ${escapeHtml(selectedName)}の登録情報を読み込みますか？`;
+  setHospitalCatOverwriteMode(isManual);
+  if (overwriteText) {
+    overwriteText.innerHTML = isManual
+      ? "✏️ 未登録の猫ちゃんに切り替えますか？"
+      : `🐾 ${escapeHtml(selectedName)}の登録情報を読み込みますか？`;
+  }
   if (overwriteApply) {
     overwriteApply.dataset.catId = catId;
     overwriteApply.dataset.hadConsultationContent = String(hadConsultationContent);
@@ -3048,12 +3241,18 @@ document.querySelector("#hospitalBirthdate")?.addEventListener("blur", () => {
 document.querySelector("#hospitalCatSelect")?.addEventListener("change", (event) => {
   requestHospitalCatInformation(event.currentTarget.value);
 });
+document.querySelector("#hospitalName")?.addEventListener("input", renderHospitalMemoCatLabel);
 document.querySelector("#hospitalCatOverwriteApply")?.addEventListener("click", () => {
   const { overwriteApply } = getHospitalCatPickerElements();
   const catId = overwriteApply?.dataset.catId || "";
   const hadConsultationContent = overwriteApply?.dataset.hadConsultationContent === "true";
   const switched = Boolean(hospitalMemoState.catId);
   closeHospitalCatOverwriteConfirm();
+  if (catId === HOSPITAL_MANUAL_CAT_ID) {
+    resetHospitalCatSwitchNotice();
+    applyHospitalManualCatSelection({ switched, hadConsultationContent });
+    return;
+  }
   if (catId) {
     resetHospitalCatSwitchNotice();
     loadHospitalCatInformation(catId, { switched, hadConsultationContent });
@@ -3068,6 +3267,50 @@ document.querySelector("#hospitalCatOverwriteCancel")?.addEventListener("click",
 document.querySelector("#hospitalMemoEdit")?.addEventListener("click", () => {
   renderHospitalMemoEditor();
   showView("hospital-memo-editor");
+});
+
+document.querySelector("#hospitalMemoTopNew")?.addEventListener("click", () => {
+  if (hasHospitalMemoDraft()) {
+    openHospitalMemoNewConfirm("new");
+    return;
+  }
+
+  startNewHospitalMemo();
+});
+
+function continueHospitalMemoDraft() {
+  if (hasHospitalMemoStateContent() || hasHospitalMemoConsultationContent()) {
+    renderHospitalCatPicker();
+    showView("hospital-memo-editor");
+    return;
+  }
+
+  showView("memo");
+}
+
+document.querySelector("#hospitalMemoNewConfirmKeep")?.addEventListener("click", () => {
+  closeHospitalMemoNewConfirm();
+  continueHospitalMemoDraft();
+});
+
+document.querySelector("#hospitalMemoNewConfirmDiscard")?.addEventListener("click", () => {
+  const discard = document.querySelector("#hospitalMemoNewConfirmDiscard");
+  const mode = discard?.dataset.mode || "new";
+  const flowKey = discard?.dataset.flowKey || "";
+  closeHospitalMemoNewConfirm();
+  if (mode === "flow") {
+    discardCurrentHospitalMemo();
+    startHospitalMemoFromFlow(flowKey);
+  } else if (mode === "acute") {
+    discardCurrentHospitalMemo();
+    startHospitalMemoFromAcute();
+  } else {
+    startNewHospitalMemo();
+  }
+});
+
+document.querySelector("#hospitalMemoDraftContinue")?.addEventListener("click", () => {
+  continueHospitalMemoDraft();
 });
 
 const chatForm = document.querySelector("#chatForm");
@@ -3285,6 +3528,12 @@ function escapeHtml(value) {
 const APP_STATE_STORAGE_KEY = "nekomoya_session_state";
 const PENDING_ACTION_STORAGE_KEY = "nekomoya_pending_action";
 const APP_STATE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+// 画面上の状態管理専用の値。DB保存時は cat_id に入れず NULL 等へ正規化すること（Phase 4B）。
+const HOSPITAL_MANUAL_CAT_ID = "__manual__";
+const HOSPITAL_CAT_OVERWRITE_APPLY_LABEL = "読み込む";
+const HOSPITAL_CAT_OVERWRITE_DETAIL = "猫の基本情報は入れ替わります。<br>今回の相談内容はそのまま残ります。";
+const HOSPITAL_MANUAL_CAT_APPLY_LABEL = "切り替える";
+const HOSPITAL_MANUAL_CAT_OVERWRITE_DETAIL = "猫ちゃんの基本情報・健康情報は空欄になります。<br>入力中の症状や相談メモはそのまま残ります。";
 const HOSPITAL_MEMO_BASIC_KEYS = ["name", "breed", "sex", "neuter", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "allergies", "medicines"];
 const HOSPITAL_MEMO_BASIC_FIELDS = [...HOSPITAL_MEMO_BASIC_KEYS, "additional", "questions"];
 let appStateSaveTimer;
@@ -3423,9 +3672,11 @@ function resetHospitalMemoState() {
   resetHospitalCatSwitchNotice();
   closeHospitalCatOverwriteConfirm();
   const catSelect = document.querySelector("#hospitalCatSelect");
-  if (catSelect) catSelect.replaceChildren(new Option("猫を選ぶ", ""));
+  if (catSelect) catSelect.replaceChildren(new Option("猫ちゃんを選ぶ", ""));
   const catPicker = document.querySelector("#hospitalCatPicker");
   if (catPicker) catPicker.hidden = true;
+  resetHospitalCatPickerGuide();
+  renderHospitalMemoCatLabel();
   resetHospitalBirthdatePicker();
   syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
@@ -3451,11 +3702,19 @@ function resetAuthForm() {
   if (form) form.reset();
 }
 
+function resetHospitalMemoTopUi() {
+  const card = document.querySelector("#hospitalMemoDraftCard");
+  if (card) card.hidden = true;
+
+  closeHospitalMemoNewConfirm();
+}
+
 function resetAccountScopedUi() {
   resetHospitalMemoState();
   resetManualMemoForm();
   resetChatConversationUi();
   resetAuthForm();
+  resetHospitalMemoTopUi();
 }
 
 function setPendingAction(action) {
@@ -3634,6 +3893,7 @@ function restoreAppState() {
   applyFormValues(document.querySelector("#hospitalMemoForm"), state.forms.hospitalMemo);
   syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
+  renderHospitalMemoCatLabel();
   setActiveView(state.activeView, { scroll: false });
   return true;
 }
@@ -3689,8 +3949,15 @@ async function restoreViewFromHistory(viewId, historyState = {}) {
   }
 
   window.NekoCats?.leaveForHistoryNavigation?.();
+  if (viewId === "hospital-memo-top") {
+    renderHospitalMemoTop();
+    setActiveView(viewId, { history: "none" });
+    saveAppState();
+    return;
+  }
+
   if (viewId === "hospital-memo-editor") {
-    renderHospitalMemoEditor();
+    renderHospitalCatPicker();
     setActiveView(viewId, { history: "none" });
     saveAppState();
     return;

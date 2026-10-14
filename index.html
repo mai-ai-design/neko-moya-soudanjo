@@ -15,7 +15,7 @@
       rel="stylesheet"
     >
     <link rel="icon" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="styles.css?v=phase3d8a-1">
+    <link rel="stylesheet" href="styles.css?v=phase4a2b-1">
     <link rel="stylesheet" href="cats.css?v=phase3d7b-1">
   </head>
   <body>
@@ -60,7 +60,7 @@
             <div class="kinako-speech">
               <span class="memo-shortcut-message">もう書くことが決まってるなら、<br>
               質問に答えず直接メモできるにゃん♪</span>
-              <button class="ghost-btn nav-link memo-shortcut-btn" type="button" data-view="memo">✏️ 自分で病院メモを書く</button>
+              <button class="ghost-btn nav-link memo-shortcut-btn" type="button" data-view="hospital-memo-top">✏️ 自分で病院メモを書く</button>
             </div>
           </div>
 
@@ -2100,6 +2100,32 @@
           <div id="lifeGrid" class="card-grid"></div>
         </section>
 
+        <section id="hospital-memo-top" class="view" aria-labelledby="hospital-memo-top-title">
+          <div class="page-heading">
+            <p class="eyebrow">病院メモ</p>
+            <h1 id="hospital-memo-top-title">🏥 病院メモ</h1>
+            <p>猫ちゃんの様子を整理して、病院で伝える準備をしましょう。</p>
+          </div>
+          <div id="hospitalMemoDraftCard" class="hospital-memo-draft-card" hidden>
+            <p class="hospital-memo-draft-title">🐾 作成中のメモがあります</p>
+            <p>前回の続きから確認・編集できます。</p>
+            <button id="hospitalMemoDraftContinue" class="primary-btn" type="button">✏️ 続きを書く</button>
+          </div>
+          <div class="hospital-memo-top-actions">
+            <button id="hospitalMemoTopNew" class="primary-btn" type="button">📝 ＋新しいメモを作る</button>
+            <p class="hospital-memo-top-coming">📂 保存したメモを見る（準備中）</p>
+          </div>
+          <div id="hospitalMemoNewConfirm" class="hospital-memo-new-confirm" hidden>
+            <p class="hospital-memo-draft-title">🐾 作成中のメモがあります</p>
+            <p id="hospitalMemoNewConfirmText"></p>
+            <p>新しいメモを作ると、今の作成中の内容は消えてしまいます。</p>
+            <div class="hospital-memo-new-confirm-actions">
+              <button id="hospitalMemoNewConfirmKeep" class="primary-btn" type="button">作成中のメモに戻る</button>
+              <button id="hospitalMemoNewConfirmDiscard" class="ghost-btn" type="button">新しいメモを作る</button>
+            </div>
+          </div>
+        </section>
+
         <section id="memo" class="view" aria-labelledby="memo-title">
           <div class="page-heading">
             <p class="eyebrow">病院に行く前メモ</p>
@@ -2115,15 +2141,25 @@
             <h1 id="hospital-memo-editor-title">病院で見せる内容を整えましょう</h1>
             <p>内容を確認して、必要なところだけ書き足せます。</p>
           </div>
+          <p id="hospitalMemoCatLabel" class="hospital-memo-cat-label" aria-live="polite" hidden></p>
           <form id="hospitalMemoForm" class="form-card">
             <div id="hospitalCatPicker" class="hospital-cat-picker" hidden>
-              <label>🐾 うちの子情報を使う<select id="hospitalCatSelect"><option value="">猫を選ぶ</option></select></label>
-              <small class="hospital-cat-picker-help">登録した内容を基本情報に入れるにゃん。体温は空欄になるから、その日の値を入れてね🐾</small>
+              <div id="hospitalCatPickerEmpty" class="hospital-cat-picker-guide" hidden>
+                <p class="hospital-cat-picker-guide-title">🐱 猫ちゃんの登録はまだありません</p>
+                <p>うちの子情報を登録すると、病院メモに基本情報を自動入力できるにゃん🐾</p>
+                <p>登録しなくても、下の「✏️ 未登録の猫ちゃん」を選べば、このまま手入力でメモを作れます。</p>
+              </div>
+              <div id="hospitalCatPickerSignedOut" class="hospital-cat-picker-guide" hidden>
+                <p class="hospital-cat-picker-guide-title">🐱 ログインすると、登録した猫ちゃんの情報を自動で入れられるにゃん🐾</p>
+                <p>ログインしなくても、このまま手入力でメモを作れます。</p>
+              </div>
+              <label id="hospitalCatSelectField">🐱 どの猫ちゃんの病院メモですか？<select id="hospitalCatSelect"><option value="">猫ちゃんを選ぶ</option></select></label>
+              <small id="hospitalCatPickerHelp" class="hospital-cat-picker-help">登録済みの猫ちゃんを選ぶと、名前・生年月日などの基本情報が自動で入るにゃん🐾<br>体温は空欄になるから、その日の値を入れてね🐾</small>
               <small id="hospitalCatPickerError" class="hospital-cat-picker-error" aria-live="polite" hidden></small>
             </div>
             <div id="hospitalCatOverwriteConfirm" class="hospital-cat-overwrite-confirm" hidden>
               <p id="hospitalCatOverwriteText"></p>
-              <p>猫の基本情報は入れ替わります。<br>今回の相談内容はそのまま残ります。</p>
+              <p id="hospitalCatOverwriteDetail">猫の基本情報は入れ替わります。<br>今回の相談内容はそのまま残ります。</p>
               <div class="hospital-cat-overwrite-actions">
                 <button id="hospitalCatOverwriteApply" class="primary-btn" type="button">読み込む</button>
                 <button id="hospitalCatOverwriteCancel" class="ghost-btn" type="button">やめる</button>
@@ -2206,14 +2242,14 @@
       <button class="nav-link" type="button" data-view="chat">
         <span>💬</span>きなこ相談
       </button>
-      <button class="nav-link" type="button" data-view="memo">
+      <button class="nav-link" type="button" data-view="hospital-memo-top">
         <span>✎</span>メモ
       </button>
     </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js?v=phase3d7b-1"></script>
-    <script src="script.js?v=phase3d8a-6"></script>
+    <script src="script.js?v=phase4a2b-1"></script>
     <script src="cat-photo-storage.js?v=phase3d7b-1"></script>
     <script src="cat-photo-prepare.js?v=phase3d7b-1"></script>
     <script src="cats.js?v=phase3d8a-2"></script>
