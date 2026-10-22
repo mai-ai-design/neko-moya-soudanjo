@@ -1913,6 +1913,10 @@ lifeConcerns.forEach(([title, cause, action, goods, caution]) => {
 
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => {
+    if (!isAuthResolved()) {
+      syncAuthStateNotice();
+      return;
+    }
     if (button.dataset.requireAuth && !isAuthenticated()) {
       requestAuthentication({ type: button.dataset.requireAuth });
       return;
@@ -2614,6 +2618,24 @@ function hasManualMemoDraft() {
 
 function hasHospitalMemoDraft() {
   return hasHospitalMemoStateContent() || hasHospitalMemoConsultationContent() || hasManualMemoDraft();
+}
+
+function hasHospitalMemoFormInput() {
+  const form = document.querySelector("#hospitalMemoForm");
+  if (!form) return false;
+  if (HOSPITAL_MEMO_BASIC_FIELDS.some((key) => String(form.elements[key]?.value || "").trim())) return true;
+  return [...form.querySelectorAll('textarea[name^="symptom-"]')].some((field) => field.value.trim());
+}
+
+function hasSymptomFlowAnswers() {
+  return Object.keys(answers).length > 0 || Object.keys(acuteAnswers).length > 0;
+}
+
+function hasGuestDraft() {
+  return hasHospitalMemoFormInput()
+    || hasManualMemoDraft()
+    || hasHospitalMemoStateContent()
+    || hasSymptomFlowAnswers();
 }
 
 function renderHospitalMemoTop() {
@@ -3537,6 +3559,37 @@ const HOSPITAL_MANUAL_CAT_OVERWRITE_DETAIL = "猫ちゃんの基本情報・健�
 const HOSPITAL_MEMO_BASIC_KEYS = ["name", "breed", "sex", "neuter", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "allergies", "medicines"];
 const HOSPITAL_MEMO_BASIC_FIELDS = [...HOSPITAL_MEMO_BASIC_KEYS, "additional", "questions"];
 let appStateSaveTimer;
+let supabaseClient = null;
+let authenticatedUser = null;
+let initialAuthResolved = false;
+let authMode = "login";
+let authResumeHandled = false;
+let authState = "pending";
+let initialRestoreHandled = false;
+let authResumeOwnerId;
+let authCallbackDetected = false;
+
+function isAuthResolved() {
+  return authState === "authenticated" || authState === "anonymous";
+}
+
+function setAuthStateNotice(mode) {
+  const notice = document.querySelector("#authStateNotice");
+  const pending = document.querySelector("#authStateNoticePending");
+  const unknown = document.querySelector("#authStateNoticeUnknown");
+  if (!notice) {
+    if (mode === "unknown") showToast("ログイン状態を確認できなかったにゃん。ページを再読み込みしてね🐾");
+    if (mode === "pending") showToast("ログイン状態を確認しているにゃん。少し待ってね🐾");
+    return;
+  }
+  if (pending) pending.hidden = mode !== "pending";
+  if (unknown) unknown.hidden = mode !== "unknown";
+  notice.hidden = mode === "none";
+}
+
+function syncAuthStateNotice() {
+  setAuthStateNotice(isAuthResolved() ? "none" : authState);
+}
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -3619,8 +3672,10 @@ function getFlowSnapshot() {
 }
 
 function saveAppState() {
+  if (!isAuthResolved()) return;
   try {
     const state = {
+      ownerId: getAuthenticatedUserId(),
       answers: cloneState(answers),
       acuteAnswers: cloneState(acuteAnswers),
       currentFlowKey,
@@ -3647,6 +3702,15 @@ function clearAppState() {
   }
 }
 
+function discardForeignAppState() {
+  window.clearTimeout(appStateSaveTimer);
+  hospitalCatPickerRequestId += 1;
+  hospitalCatLoadRequestId += 1;
+  chatTargetRequestId += 1;
+  clearAppState();
+  resetAccountScopedUi();
+}
+
 function resetHospitalMemoState() {
   hospitalMemoState.source = "";
   hospitalMemoState.createdAt = "";
@@ -3667,6 +3731,8 @@ function resetHospitalMemoState() {
   }
   const symptomFields = document.querySelector("#hospitalMemoSymptomFields");
   if (symptomFields) symptomFields.innerHTML = "";
+  const output = document.querySelector("#hospitalMemoOutput");
+  if (output) output.replaceChildren();
   const createdAt = document.querySelector("#hospitalMemoCreatedAt");
   if (createdAt) createdAt.textContent = "";
   resetHospitalCatSwitchNotice();
@@ -3700,6 +3766,7 @@ function resetChatConversationUi() {
 function resetAuthForm() {
   const form = document.querySelector("#authForm");
   if (form) form.reset();
+  updateAuthDraftWarning();
 }
 
 function resetHospitalMemoTopUi() {
@@ -3709,12 +3776,23 @@ function resetHospitalMemoTopUi() {
   closeHospitalMemoNewConfirm();
 }
 
+function resetSymptomFlowState() {
+  currentFlowKey = "vomit";
+  resetVomitCheckPage();
+  resetAcutePage();
+  replaceObjectContents(answers, {});
+  replaceObjectContents(acuteAnswers, {});
+  currentVomitQuestionIndex = 0;
+  acuteQuestionIndex = 0;
+}
+
 function resetAccountScopedUi() {
   resetHospitalMemoState();
   resetManualMemoForm();
   resetChatConversationUi();
   resetAuthForm();
   resetHospitalMemoTopUi();
+  resetSymptomFlowState();
 }
 
 function setPendingAction(action) {
@@ -3854,6 +3932,7 @@ function restoreAcuteFlow(flow) {
 }
 
 function restoreAppState() {
+  if (!isAuthResolved()) return false;
   let state;
   try {
     const raw = sessionStorage.getItem(APP_STATE_STORAGE_KEY);
@@ -3872,6 +3951,12 @@ function restoreAppState() {
   const viewExists = [...document.querySelectorAll(".view")].some((view) => view.id === state.activeView);
   if (!viewExists) {
     clearAppState();
+    return false;
+  }
+
+  const ownerId = state.ownerId === null || typeof state.ownerId === "string" ? state.ownerId : undefined;
+  if (ownerId === undefined || ownerId !== getAuthenticatedUserId()) {
+    discardForeignAppState();
     return false;
   }
 
@@ -3894,8 +3979,17 @@ function restoreAppState() {
   syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
   renderHospitalMemoCatLabel();
+  updateAuthDraftWarning();
   setActiveView(state.activeView, { scroll: false });
   return true;
+}
+
+function runInitialRestore() {
+  if (initialRestoreHandled) return;
+  if (!isAuthResolved()) return;
+  initialRestoreHandled = true;
+  authResumeOwnerId = getAuthenticatedUserId();
+  if (!restoreAppState()) setActiveView("home", { history: "replace" });
 }
 
 function replaceCurrentHistoryView() {
@@ -3976,6 +4070,10 @@ async function restoreViewFromHistory(viewId, historyState = {}) {
 window.addEventListener("popstate", (event) => {
   const viewId = event.state?.nekomoyaView;
   if (typeof viewId !== "string" || !document.getElementById(viewId)) return;
+  if (!isAuthResolved()) {
+    syncAuthStateNotice();
+    return;
+  }
   isHandlingHistoryPopstate = true;
   Promise.resolve(restoreViewFromHistory(viewId, event.state)).finally(() => {
     saveAppState();
@@ -3999,14 +4097,7 @@ function bindPersistentFormDrafts() {
 bindPersistentFormDrafts();
 resetHospitalBirthdatePicker();
 syncHospitalBirthControlsFromDate();
-restoreAppState();
 window.addEventListener("beforeunload", saveAppState);
-
-let supabaseClient = null;
-let authenticatedUser = null;
-let initialAuthResolved = false;
-let authMode = "login";
-let authResumeHandled = false;
 
 function getSupabaseRuntimeConfig() {
   if (typeof SUPABASE_CONFIG === "undefined" || !isPlainObject(SUPABASE_CONFIG)) return null;
@@ -4248,41 +4339,82 @@ async function deleteAccount() {
   showToast("退会が完了しました。ご利用ありがとうございました。");
 }
 
+const AUTH_DRAFT_WARNING_TEXT = [
+  "⚠️ 入力中の内容があります",
+  "",
+  "安全のため、ログインすると現在入力中の内容は消去されます。",
+  "ほかの方の情報が混ざらないようにするためです。",
+  "",
+  "入力内容を残したい場合は「キャンセル」を押して、",
+  "内容を控えてからログインしてくださいね🐾"
+].join("\n");
+
+function updateAuthDraftWarning() {
+  const warning = document.querySelector("#authDraftWarning");
+  if (!warning) return;
+  warning.hidden = isAuthenticated() || !hasGuestDraft();
+}
+
+function confirmAuthDraftLossIfWarningMissing() {
+  if (document.querySelector("#authDraftWarning")) return true;
+  if (isAuthenticated() || !hasGuestDraft()) return true;
+  return window.confirm(AUTH_DRAFT_WARNING_TEXT);
+}
+
 function requestAuthentication(action = null) {
   authResumeHandled = false;
+  authCallbackDetected = false;
   if (action) setPendingAction(action);
+  else clearPendingAction();
   saveAppState();
   setAuthMode("login");
   setActiveView("auth", { history: "replace" });
+  updateAuthDraftWarning();
   closeAuthMenu();
   if (!supabaseClient) {
     setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
   }
 }
 
-function restoreAfterAuthentication() {
-  if (authResumeHandled) return;
-  authResumeHandled = true;
-  restoreAppState();
-  const callbackUrl = new URL(window.location.href);
-  const next = callbackUrl.searchParams.get("next");
-  const action = getPendingAction();
-  clearPendingAction();
+function restoreAfterAuthentication({ source = "event" } = {}) {
+  if (!isAuthResolved()) return;
+  const currentUserId = getAuthenticatedUserId();
+  let viewChanged = false;
 
-  if (isAuthenticated() && (action?.type === "register_cat" || next === "register_cat")) {
-    if (window.NekoCats?.openRegister) {
-      window.NekoCats.openRegister({ history: "replace" });
+  const draftAlreadyRestored = initialRestoreHandled && authResumeOwnerId === currentUserId;
+  if (!draftAlreadyRestored) {
+    initialRestoreHandled = true;
+    authResumeOwnerId = currentUserId;
+    if (!restoreAppState()) setActiveView("home", { history: "replace" });
+    viewChanged = true;
+  }
+
+  const startedHere = source === "form" || source === "oauth" || (source === "event" && authCallbackDetected);
+  if (!authResumeHandled && isAuthenticated() && startedHere) {
+    authResumeHandled = true;
+    authCallbackDetected = false;
+    const callbackUrl = new URL(window.location.href);
+    const next = callbackUrl.searchParams.get("next");
+    const action = getPendingAction();
+    clearPendingAction();
+
+    if (action?.type === "register_cat" || next === "register_cat") {
+      if (window.NekoCats?.openRegister) {
+        window.NekoCats.openRegister({ history: "replace" });
+      } else {
+        setActiveView("home", { history: "replace" });
+      }
     } else {
       setActiveView("home", { history: "replace" });
     }
-  } else {
-    setActiveView("home", { history: "replace" });
+    viewChanged = true;
+
+    if (callbackUrl.searchParams.has("code") || callbackUrl.hash || callbackUrl.searchParams.has("next")) {
+      window.history.replaceState({}, document.title, getAppRedirectUrl());
+    }
   }
 
-  if (callbackUrl.searchParams.has("code") || callbackUrl.hash || callbackUrl.searchParams.has("next")) {
-    window.history.replaceState({}, document.title, getAppRedirectUrl());
-  }
-  replaceCurrentHistoryView();
+  if (viewChanged) replaceCurrentHistoryView();
 }
 
 function isAuthCallbackUrl() {
@@ -4291,9 +4423,13 @@ function isAuthCallbackUrl() {
 }
 
 async function initializeAuth() {
+  authCallbackDetected = isAuthCallbackUrl();
   const config = getSupabaseRuntimeConfig();
   if (!config || !window.supabase?.createClient) {
+    authState = "unknown";
     initialAuthResolved = true;
+    syncAuthStateNotice();
+    runInitialRestore();
     updateAuthMenu();
     return;
   }
@@ -4307,34 +4443,68 @@ async function initializeAuth() {
       }
     });
 
-    const { data } = await supabaseClient.auth.getSession();
-    authenticatedUser = data.session?.user || null;
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) {
+      console.error("Auth session check failed:", error);
+      authenticatedUser = null;
+      authState = "unknown";
+    } else {
+      authenticatedUser = data.session?.user || null;
+      authState = authenticatedUser ? "authenticated" : "anonymous";
+    }
     initialAuthResolved = true;
+    syncAuthStateNotice();
+
+    if (authState === "authenticated" && authCallbackDetected) {
+      restoreAfterAuthentication({ source: "oauth" });
+    }
+    runInitialRestore();
     updateAuthMenu();
 
-    if (authenticatedUser && isAuthCallbackUrl()) {
-      restoreAfterAuthentication();
-    }
-
     supabaseClient.auth.onAuthStateChange((event, session) => {
-      authenticatedUser = session?.user || null;
-      updateAuthMenu();
+      const previousUserId = getAuthenticatedUserId();
+      const previousAuthState = authState;
+      const nextUserId = session?.user?.id ?? null;
+      const ownerResolved = Boolean(session) || event === "SIGNED_OUT";
+      const isFirstResolution = previousAuthState === "pending" || previousAuthState === "unknown";
+      const isOwnerChanged = ownerResolved && !isFirstResolution && nextUserId !== previousUserId;
 
-      if (event === "SIGNED_IN") {
-        restoreAfterAuthentication();
+      if (isOwnerChanged) {
+        if (previousUserId !== null) clearPendingAction();
+        discardForeignAppState();
+        authResumeHandled = false;
+        initialRestoreHandled = false;
       }
+
+      if (session) {
+        authenticatedUser = session.user;
+        authState = "authenticated";
+      } else if (event === "SIGNED_OUT") {
+        authenticatedUser = null;
+        authState = "anonymous";
+      }
+      syncAuthStateNotice();
 
       if (event === "SIGNED_OUT") {
         authResumeHandled = false;
-        clearAppState();
         clearPendingAction();
-        resetAccountScopedUi();
+        discardForeignAppState();
       }
+
+      if (event === "SIGNED_IN") {
+        restoreAfterAuthentication({ source: "event" });
+      }
+
+      runInitialRestore();
+      updateAuthMenu();
     });
   } catch (error) {
     supabaseClient = null;
     authenticatedUser = null;
+    authState = "unknown";
     initialAuthResolved = true;
+    syncAuthStateNotice();
+    runInitialRestore();
     updateAuthMenu();
   }
 }
@@ -4362,8 +4532,8 @@ document.querySelector("#authMenuLogout")?.addEventListener("click", async () =>
     showToast("ログアウトできませんでした。時間をおいてもう一度お試しください。");
     return;
   }
-  clearAppState();
   clearPendingAction();
+  discardForeignAppState();
   setActiveView("home", { history: "replace" });
   showToast("ログアウトしました。");
 });
@@ -4384,6 +4554,7 @@ document.querySelector("#authCancel")?.addEventListener("click", () => {
 });
 
 document.querySelector("#googleSignIn")?.addEventListener("click", async () => {
+  if (!confirmAuthDraftLossIfWarningMissing()) return;
   if (!supabaseClient) {
     setAuthFeedback("現在ログイン機能を準備中です。設定が完了してからお試しください。");
     return;
@@ -4401,6 +4572,7 @@ document.querySelector("#googleSignIn")?.addEventListener("click", async () => {
 
 document.querySelector("#authForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!confirmAuthDraftLossIfWarningMissing()) return;
   const form = event.currentTarget;
   const email = form.elements.email.value.trim();
   const password = form.elements.password.value;
@@ -4430,7 +4602,7 @@ document.querySelector("#authForm")?.addEventListener("submit", async (event) =>
     return;
   }
 
-  restoreAfterAuthentication();
+  restoreAfterAuthentication({ source: "form" });
 });
 
 setAuthMode("login");

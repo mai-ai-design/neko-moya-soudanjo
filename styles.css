@@ -522,6 +522,20 @@ p {
   padding: 16px;
 }
 
+.auth-state-notice {
+  margin-top: 12px;
+}
+
+.auth-state-notice-label {
+  color: var(--brown-strong);
+  font-weight: 700;
+}
+
+.auth-draft-warning {
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
 .kinako-intro-card {
   display: grid;
   grid-template-columns: 64px 1fr;

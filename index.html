@@ -15,7 +15,7 @@
       rel="stylesheet"
     >
     <link rel="icon" href="assets/logo-icon.png">
-    <link rel="stylesheet" href="styles.css?v=phase4a2b-1">
+    <link rel="stylesheet" href="styles.css?v=phase4aS1-1">
     <link rel="stylesheet" href="cats.css?v=phase3d7b-1">
   </head>
   <body>
@@ -37,6 +37,22 @@
           </div>
         </div>
       </header>
+
+      <div id="authStateNotice" class="notice-card auth-state-notice" role="status" aria-live="polite" hidden>
+        <div id="authStateNoticePending" hidden>
+          <strong>⏳ ログイン状態を確認しています</strong>
+          <p>準備ができるまで、少しお待ちください。</p>
+          <p>ほかの方の情報が混ざらないように、画面の移動とメモの作成をお待ちいただいています🐾</p>
+        </div>
+        <div id="authStateNoticeUnknown" hidden>
+          <strong>⚠️ ログイン状態を確認できませんでした</strong>
+          <p>通信状況をご確認のうえ、ページを再読み込みしてください。</p>
+          <p class="auth-state-notice-label">保存済みの下書きについて</p>
+          <p>削除していません。同じ利用者の有効な下書きがあれば、復元できます。</p>
+          <p class="auth-state-notice-label">新しいメモの作成について</p>
+          <p>ログイン状態が確認できるまでお待ちいただいています。再読み込みをお願いします🐾</p>
+        </div>
+      </div>
 
       <main>
         <section id="home" class="view is-active" aria-labelledby="home-title">
@@ -2006,6 +2022,12 @@
             <h1 id="auth-title">ログイン</h1>
             <p class="auth-lead">うちの子の情報や病院メモを残しておくために、ログインをお願いしています。相談だけなら、ログインは必要ありません。</p>
 
+            <div id="authDraftWarning" class="notice-card auth-draft-warning" role="status" aria-live="polite" hidden>
+              <strong>⚠️ 入力中の内容があります</strong>
+              <p>安全のため、ログインすると現在入力中の内容は消去されます。ほかの方の情報が混ざらないようにするためです。</p>
+              <p>入力内容を残したい場合は、下の「あとで」を押して内容を控えてから、ログインしてくださいね🐾</p>
+            </div>
+
             <button id="googleSignIn" class="secondary-btn auth-google-button" type="button">Googleで続ける</button>
             <div class="auth-divider" aria-hidden="true"><span>または</span></div>
 
@@ -2249,7 +2271,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js?v=phase3d7b-1"></script>
-    <script src="script.js?v=phase4a2b-1"></script>
+    <script src="script.js?v=phase4aS1-2"></script>
     <script src="cat-photo-storage.js?v=phase3d7b-1"></script>
     <script src="cat-photo-prepare.js?v=phase3d7b-1"></script>
     <script src="cats.js?v=phase3d8a-2"></script>
