@@ -1517,6 +1517,29 @@ textarea {
 .hospital-memo-save-guide-actions,
 .hospital-memo-delete-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
+@media (max-width: 639px) {
+  .hospital-memo-save-guide-actions {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .hospital-memo-save-guide-actions > button {
+    width: 100%;
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  #hospitalMemoGuideLogin {
+    white-space: nowrap;
+  }
+
+  #hospitalMemoGuideContinue .hospital-memo-guide-continue-main,
+  #hospitalMemoGuideContinue .hospital-memo-guide-continue-note {
+    display: block;
+    white-space: nowrap;
+  }
+}
+
 .hospital-memo-top-coming {
   color: var(--muted);
   font-size: 0.82rem;
