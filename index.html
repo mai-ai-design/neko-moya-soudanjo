@@ -2133,9 +2133,19 @@
             <p>前回の続きから確認・編集できます。</p>
             <button id="hospitalMemoDraftContinue" class="primary-btn" type="button">✏️ 続きを書く</button>
           </div>
+          <div id="hospitalMemoSaveGuide" class="notice-card hospital-memo-save-guide" hidden>
+            <p><strong>🐾 いまはメモを保存できません</strong></p>
+            <p>ログインしていないので、作ったメモはこのタブを閉じると消えます。</p>
+            <p>あとから見返したいときは、先にログインしてから作ってくださいね。</p>
+            <div class="hospital-memo-save-guide-actions">
+              <button id="hospitalMemoGuideLogin" class="primary-btn" type="button">先にログインする</button>
+              <button id="hospitalMemoGuideContinue" class="ghost-btn" type="button">このまま作る（保存はしません）</button>
+            </div>
+          </div>
           <div class="hospital-memo-top-actions">
-            <button id="hospitalMemoTopNew" class="primary-btn" type="button">📝 ＋新しいメモを作る</button>
-            <p class="hospital-memo-top-coming">📂 保存したメモを見る（準備中）</p>
+            <button id="hospitalMemoTopNew" class="primary-btn" type="button">📝 新しいメモを作る</button>
+            <button id="hospitalMemoArchiveOpen" class="secondary-btn hospital-memo-archive-open" type="button">📂 保存したメモを見る</button>
+            <p id="hospitalMemoArchiveNote" class="hospital-memo-top-coming" hidden></p>
           </div>
           <div id="hospitalMemoNewConfirm" class="hospital-memo-new-confirm" hidden>
             <p class="hospital-memo-draft-title">🐾 作成中のメモがあります</p>
@@ -2236,7 +2246,34 @@
             <h1 id="hospital-memo-display-title"><img class="hospital-memo-title-icon" src="assets/kinako.png" alt="きなこ">病院で見せるメモ</h1>
           </div>
           <article id="hospitalMemoOutput" class="hospital-memo-output" aria-live="polite"></article>
+          <div id="hospitalMemoSaveArea" class="hospital-memo-save-area">
+            <button id="hospitalMemoSave" class="primary-btn" type="button">💾 このメモを保存する</button>
+            <p id="hospitalMemoSaveNote" class="hospital-memo-save-note" hidden></p>
+          </div>
           <button id="hospitalMemoEdit" class="secondary-btn" type="button">編集する</button>
+        </section>
+
+        <section id="hospital-memo-archive-list" class="view" aria-labelledby="hospital-memo-archive-list-title">
+          <div class="page-heading"><p class="eyebrow">病院メモ</p><h1 id="hospital-memo-archive-list-title">📂 保存したメモ</h1></div>
+          <p id="hospitalMemoArchiveStatus" class="cat-status" hidden></p>
+          <div id="hospitalMemoArchiveCards" class="hospital-memo-archive-cards"></div>
+          <button id="hospitalMemoArchiveMore" class="ghost-btn" type="button" hidden>もっと見る</button>
+          <button id="hospitalMemoArchiveBack" class="ghost-btn" type="button">← 病院メモにもどる</button>
+          <div id="hospitalMemoDeleteConfirm" class="hospital-memo-delete-confirm" hidden>
+            <p class="hospital-memo-draft-title">🗑 このメモを削除しますか？</p><p id="hospitalMemoDeleteTarget"></p><p>削除すると元に戻せません。</p>
+            <div class="hospital-memo-delete-actions"><button id="hospitalMemoDeleteApply" class="primary-btn" type="button">削除する</button><button id="hospitalMemoDeleteCancel" class="ghost-btn" type="button">やめる</button></div>
+            <p id="hospitalMemoDeleteError" class="hospital-memo-delete-error" aria-live="polite" hidden></p>
+          </div>
+        </section>
+
+        <section id="hospital-memo-archive" class="view" aria-labelledby="hospital-memo-archive-title">
+          <div class="page-heading"><p class="eyebrow">保存したメモ</p><h1 id="hospital-memo-archive-title">病院で見せるメモ</h1><p id="hospitalMemoArchiveSavedAt" class="hospital-created-at"></p></div>
+          <article id="hospitalMemoArchiveOutput" class="hospital-memo-output" aria-live="polite"></article>
+          <div id="hospitalMemoPdfArea" class="hospital-memo-pdf-area">
+            <button id="hospitalMemoPdf" class="hospital-memo-pdf-btn" type="button" disabled>🖨 PDF保存・印刷</button>
+            <p id="hospitalMemoPdfNote" class="hospital-memo-pdf-note">印刷画面からPDFとして保存できます。保存方法は端末によって異なります。</p>
+          </div>
+          <button id="hospitalMemoArchiveToList" class="ghost-btn" type="button">← 保存したメモ一覧へ</button>
         </section>
       </main>
 

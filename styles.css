@@ -1476,14 +1476,46 @@ textarea {
 
 .hospital-memo-top-actions {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   margin-top: 16px;
 }
 
-.hospital-memo-top-actions .primary-btn,
+#hospitalMemoTopNew,
+#hospitalMemoArchiveOpen {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #E7CFC5;
+  border-radius: 10px;
+  background: #FBECE8;
+  box-shadow: none;
+  color: #6B4F3F;
+}
+
+#hospitalMemoTopNew:hover,
+#hospitalMemoArchiveOpen:hover {
+  border-color: #E7CFC5;
+  background: #F5D8D1;
+  box-shadow: none;
+  color: #6B4F3F;
+}
+
+#hospitalMemoTopNew:focus-visible,
+#hospitalMemoArchiveOpen:focus-visible {
+  outline: 3px solid #C96A5B;
+  outline-offset: 2px;
+}
+
 .hospital-memo-draft-card .primary-btn {
   width: 100%;
 }
+
+.hospital-memo-save-guide,
+.hospital-memo-delete-confirm { display: grid; gap: 8px; margin-top: 16px; }
+.hospital-memo-save-guide p,
+.hospital-memo-delete-confirm p { margin: 0; }
+.hospital-memo-save-guide-actions,
+.hospital-memo-delete-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
 .hospital-memo-top-coming {
   color: var(--muted);
@@ -1602,6 +1634,30 @@ textarea {
   background: #fffdf8;
 }
 
+.hospital-memo-save-area { display: grid; gap: 8px; margin: 16px 0; }
+.hospital-memo-save-area .primary-btn { width: 100%; }
+.hospital-memo-save-note,
+.hospital-memo-delete-error { margin: 0; color: #a84e43; white-space: pre-line; }
+.hospital-memo-archive-cards { display: grid; gap: 12px; margin: 16px 0; }
+.hospital-memo-archive-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid #f0e6da; border-radius: 12px; background: #fffdf9; }
+.hospital-memo-archive-summary { display: grid; gap: 4px; min-width: 0; }
+.hospital-memo-archive-date { color: #8c8276; font-size: 0.82rem; }
+.hospital-memo-archive-name { font-size: 1rem; font-weight: 700; }
+.hospital-memo-archive-actions { display: flex; align-items: center; gap: 12px; }
+.hospital-memo-archive-card-open,
+.hospital-memo-archive-delete { min-width: 44px; height: 44px; border-radius: 10px; cursor: pointer; font: inherit; font-weight: 700; }
+.hospital-memo-archive-card-open { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px; border: 1px solid #6B4F3F; border-radius: 10px; background: #6B4F3F; color: #FFFFFF; white-space: nowrap; }
+.hospital-memo-archive-card-open span { font-size: 1.3em; line-height: 1; }
+.hospital-memo-archive-delete { position: relative; width: 44px; padding: 0; border: 1px solid #F1D9D3; background: #FBECE8; color: #A34F43; }
+.hospital-memo-archive-delete svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; vertical-align: middle; }
+.hospital-memo-archive-card-open:hover { border-color: #563E32; background: #563E32; color: #FFFFFF; }
+.hospital-memo-archive-delete:hover { border-color: #F1D9D3; background: #F5D8D1; color: #A34F43; }
+.hospital-memo-archive-card-open:focus-visible,
+.hospital-memo-archive-delete:focus-visible { outline: 3px solid #C96A5B; outline-offset: 2px; }
+.hospital-memo-archive-delete::after { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 4px 7px; border-radius: 6px; background: #4A423B; color: #FFFFFF; content: "削除する"; font-size: 12px; font-weight: 400; line-height: 1.2; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }
+.hospital-memo-archive-delete:hover::after,
+.hospital-memo-archive-delete:focus-visible::after { opacity: 1; }
+
 .hospital-memo-output h3 {
   color: var(--brown-strong);
 }
@@ -1653,9 +1709,21 @@ textarea {
 }
 
 @media (max-width: 639px) {
+  .hospital-memo-top-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   #memo-title {
     max-width: 11.5em;
     font-size: clamp(1.5rem, 7vw, 1.85rem);
+  }
+
+  .hospital-memo-archive-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hospital-memo-archive-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -1871,5 +1939,80 @@ textarea {
   .card-grid,
   .symptom-category-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.hospital-memo-pdf-area {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.hospital-memo-pdf-btn {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid #E7CFC5;
+  border-radius: 10px;
+  background: #FBECE8;
+  color: #6B4F3F;
+  font-weight: 700;
+}
+
+.hospital-memo-pdf-btn:hover:not(:disabled) {
+  background: #F5D8D1;
+}
+
+.hospital-memo-pdf-btn:focus-visible {
+  outline: 3px solid #C96A5B;
+  outline-offset: 2px;
+}
+
+.hospital-memo-pdf-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hospital-memo-pdf-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media print {
+  .bottom-nav, .toast,
+  #hospitalMemoPdfArea, #hospitalMemoArchiveToList { display: none !important; }
+  .hospital-memo-archive-delete::after { content: none !important; }
+  body[data-print="ready"] .site-header,
+  body[data-print="ready"] .site-footer { display: none !important; }
+  body[data-print="blocked"] #hospital-memo-archive .page-heading,
+  body[data-print="blocked"] #hospitalMemoArchiveSavedAt,
+  body[data-print="blocked"] #hospitalMemoArchiveOutput { display: none !important; }
+  @page { size: A4 portrait; margin: 15mm; }
+  body[data-print="ready"] { background: #FFFFFF !important; color: #333333 !important; }
+  body[data-print="ready"] #hospitalMemoArchiveOutput {
+    display: block !important;
+    background: #FFFFFF !important;
+    color: #333333 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+  }
+  body[data-print="ready"] #hospitalMemoArchiveOutput dl { display: block !important; }
+  body[data-print="ready"] #hospitalMemoArchiveOutput section { break-inside: auto; }
+  body[data-print="ready"] #hospitalMemoArchiveOutput dd { white-space: pre-wrap; }
+  body[data-print="ready"] #hospital-memo-archive .page-heading,
+  body[data-print="ready"] #hospitalMemoArchiveOutput {
+    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif !important;
+  }
+  body[data-print="ready"] #hospitalMemoArchiveOutput,
+  body[data-print="ready"] #hospitalMemoArchiveOutput dt,
+  body[data-print="ready"] #hospitalMemoArchiveOutput dd { font-size: 11pt !important; line-height: 1.6 !important; }
+  body[data-print="ready"] #hospital-memo-archive-title { font-size: 16pt !important; max-width: none !important; }
+  body[data-print="ready"] #hospitalMemoArchiveSavedAt { font-size: 10pt !important; color: #333333 !important; }
+  body[data-print="ready"] #hospitalMemoArchiveOutput h3 {
+    font-size: 14pt !important;
+    color: #4A423B !important;
+    break-after: avoid;
   }
 }

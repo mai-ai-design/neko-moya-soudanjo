@@ -1968,6 +1968,12 @@ function setActiveView(viewId, { scroll = true, history = "none", historyState =
       window.history.pushState(state, document.title, window.location.href);
     }
   }
+  if (viewId !== "hospital-memo-archive") {
+    archiveDetailMemoId = null;
+    printableMemoId = null;
+    printableOwnerId = null;
+  }
+  syncArchivePrintState();
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -2641,7 +2647,7 @@ function hasGuestDraft() {
 function renderHospitalMemoTop() {
   const card = document.querySelector("#hospitalMemoDraftCard");
   if (card) card.hidden = !hasHospitalMemoDraft();
-
+  syncHospitalMemoArchiveControls();
   closeHospitalMemoNewConfirm();
 }
 
@@ -3200,19 +3206,20 @@ function formatHospitalMemoUnit(value, unit) {
   return hasUnit ? value : `${value}${unit}`;
 }
 
-function renderHospitalMemoDisplay() {
-  const root = document.querySelector("#hospitalMemoOutput");
-  const basic = hospitalMemoState.basic;
+function renderHospitalMemoDisplay(memo = hospitalMemoState, rootSelector = "#hospitalMemoOutput") {
+  const root = document.querySelector(rootSelector);
+  if (!root) return;
+  const basic = memo.basic || {};
   const basicEntries = [
-    ["名前", basic.name], ["猫種", basic.breed], ["性別", basic.sex], ["避妊・去勢", basic.neuter], ["年齢", getHospitalMemoAge(basic)],
+    ["名前", basic.name], ["猫種", basic.breed], ["性別", basic.sex], ["避妊・去勢", basic.neuter], ["年齢", basic.ageText || getHospitalMemoAge(basic)],
     ["体重", formatHospitalMemoUnit(basic.weight, "kg")], ["体温", formatHospitalMemoUnit(basic.temperature, "℃")], ["持病", basic.conditions], ["アレルギー", basic.allergies], ["服薬", basic.medicines]
   ].filter(([, value]) => value);
   const renderEntries = (entries, className = "") => `<dl class="${className}">${entries.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>`;
-  const groups = hospitalMemoState.groups.map((group) => `
+  const groups = (memo.groups || []).map((group) => `
     <section><h3>${escapeHtml(group.title)}</h3>${renderEntries(group.entries.map((entry) => [entry.label, entry.value]).filter(([, value]) => value), "hospital-memo-detail-list")}</section>
   `).join("");
-  const extras = [["追加で伝えたいこと", hospitalMemoState.additional], ["獣医さんに聞きたいこと", hospitalMemoState.questions]].filter(([, value]) => value);
-  const hasGroupContent = hospitalMemoState.groups.some((group) => group.entries.some((entry) => entry.value));
+  const extras = [["追加で伝えたいこと", memo.additional], ["獣医さんに聞きたいこと", memo.questions]].filter(([, value]) => value);
+  const hasGroupContent = (memo.groups || []).some((group) => group.entries.some((entry) => entry.value));
   if (!basicEntries.length && !hasGroupContent && !extras.length) {
     root.innerHTML = `<p class="coming-soon-note">まだ病院メモがないにゃん。症状チェックか手入力メモから作れるよ🐾</p>`;
     return;
@@ -3221,8 +3228,202 @@ function renderHospitalMemoDisplay() {
     ${basicEntries.length ? `<section><h3>猫の情報</h3>${renderEntries(basicEntries, "hospital-memo-basic-grid")}</section>` : ""}
     ${groups}
     ${extras.length ? `<section><h3>追加情報</h3>${renderEntries(extras, "hospital-memo-detail-list")}</section>` : ""}
-    <p class="hospital-created-at">作成日時：${escapeHtml(hospitalMemoState.createdAt)}</p>
+    <p class="hospital-created-at">作成日時：${escapeHtml(memo.createdAt || "")}</p>
   `;
+}
+
+function setMemoSaveButton(state) {
+  const button = document.querySelector("#hospitalMemoSave");
+  if (!button) return;
+  const labels = { idle: "💾 このメモを保存する", saving: "保存しているにゃん…", saved: "保存しました", retry: "もう一度保存する" };
+  button.textContent = labels[state] || labels.idle;
+  button.disabled = state === "saving";
+}
+
+function setMemoSaveNote(message) {
+  const note = document.querySelector("#hospitalMemoSaveNote");
+  if (!note) return;
+  note.hidden = !message;
+  note.textContent = message;
+}
+
+function syncHospitalMemoArchiveControls() {
+  const canSave = isAuthResolved() && isAuthenticated();
+  const saveArea = document.querySelector("#hospitalMemoSaveArea");
+  const archiveOpen = document.querySelector("#hospitalMemoArchiveOpen");
+  const archiveNote = document.querySelector("#hospitalMemoArchiveNote");
+  const guide = document.querySelector("#hospitalMemoSaveGuide");
+  if (saveArea) saveArea.hidden = !canSave;
+  if (!canSave) setMemoSaveNote("💡 このメモは保存できません（今だけの表示です）。保存したいときは、ログインしてから作り直してくださいね🐾");
+  if (archiveOpen) archiveOpen.disabled = !canSave;
+  if (archiveNote) { archiveNote.hidden = canSave; archiveNote.textContent = canSave ? "" : "ログインすると、保存したメモを見られます🐾"; }
+  if (guide) guide.hidden = canSave;
+}
+
+function buildHospitalMemoRow() {
+  const basic = hospitalMemoState.basic || {};
+  const catId = hospitalMemoState.catId && hospitalMemoState.catId !== HOSPITAL_MANUAL_CAT_ID ? hospitalMemoState.catId : null;
+  const dropEmpty = (object) => Object.fromEntries(Object.entries(object).filter(([, value]) => typeof value === "string" && value.trim() !== ""));
+  return {
+    cat_id: catId,
+    cat_snapshot: dropEmpty({ name: basic.name || "", breed: basic.breed || "", sex: basic.sex || "", neuter: basic.neuter || "", ageText: getHospitalMemoAge(basic) || "" }),
+    health_snapshot: dropEmpty({ weight: basic.weight || "", conditions: basic.conditions || "", allergies: basic.allergies || "", medicines: basic.medicines || "" }),
+    memo_content: { schemaVersion: 1, source: hospitalMemoState.source || "", temperature: basic.temperature || "", groups: (hospitalMemoState.groups || []).map((group) => ({ title: group.title, entries: (group.entries || []).filter((entry) => entry.value && entry.value.trim() !== "") })).filter((group) => group.entries.length > 0), additional: hospitalMemoState.additional || "", questions: hospitalMemoState.questions || "" }
+  };
+}
+
+function ensurePendingMemoSave(userId) {
+  if (pendingMemoSave && pendingMemoSave.userId === userId && pendingMemoSave.draftKey === hospitalMemoDraftKey) return pendingMemoSave;
+  pendingMemoSave = { id: crypto.randomUUID(), userId, draftKey: hospitalMemoDraftKey, payload: buildHospitalMemoRow() };
+  return pendingMemoSave;
+}
+
+function isSameMemoPayload(row, payload, userId) {
+  return row?.user_id === userId && row.cat_id === payload.cat_id && JSON.stringify(row.cat_snapshot || {}) === JSON.stringify(payload.cat_snapshot) && JSON.stringify(row.health_snapshot || {}) === JSON.stringify(payload.health_snapshot) && JSON.stringify(row.memo_content || {}) === JSON.stringify(payload.memo_content);
+}
+
+function finishMemoSaveSuccess() { pendingMemoSave = null; setMemoSaveButton("saved"); setMemoSaveNote(""); showToast("保存したにゃん🐾 「保存したメモ」からいつでも開けるよ"); }
+function failMemoSave() { setMemoSaveButton("retry"); setMemoSaveNote(MEMO_SAVE_FAIL_NOTE); }
+
+async function onHospitalMemoSaveClick() {
+  if (!isAuthResolved() || !isAuthenticated() || !memoStore) return;
+  const requestId = ++memoSaveRequestId;
+  const requestUserId = getAuthenticatedUserId();
+  const pending = ensurePendingMemoSave(requestUserId);
+  setMemoSaveButton("saving");
+  const result = await memoStore.insert({ id: pending.id, user_id: requestUserId, ...pending.payload });
+  if (requestId !== memoSaveRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-display") return;
+  if (result.ok) { finishMemoSaveSuccess(); return; }
+  if (result.kind === "duplicate") {
+    const check = await memoStore.findById(pending.id);
+    if (requestId !== memoSaveRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-display") return;
+    if (check.ok && check.row && isSameMemoPayload(check.row, pending.payload, requestUserId)) { finishMemoSaveSuccess(); return; }
+  }
+  failMemoSave();
+}
+
+function commitDraftBeforeArchive() {
+  if (!isAuthResolved() || !isAuthenticated()) return false;
+  window.clearTimeout(appStateSaveTimer);
+  const token = `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  pendingCommitToken = token;
+  try { saveAppState(); } finally { pendingCommitToken = null; }
+  try {
+    const raw = sessionStorage.getItem(APP_STATE_STORAGE_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    return state.commitToken === token && state.ownerId === getAuthenticatedUserId();
+  } catch (error) { return false; }
+}
+
+function setArchiveStatus(message) { const status = document.querySelector("#hospitalMemoArchiveStatus"); if (status) { status.hidden = !message; status.textContent = message; } }
+function archiveDisplayName(row) { return row?.cat_snapshot?.name || "病院メモ"; }
+
+function renderMemoArchiveList(rows) {
+  const root = document.querySelector("#hospitalMemoArchiveCards");
+  if (!root) return;
+  root.replaceChildren();
+  if (!rows.length) { root.innerHTML = '<p class="coming-soon-note">まだ保存したメモはないにゃん🐾</p>'; return; }
+  rows.forEach((row) => {
+    const card = document.createElement("article");
+    card.className = "hospital-memo-archive-card";
+    card.dataset.memoId = row.id;
+
+    const summary = document.createElement("div");
+    summary.className = "hospital-memo-archive-summary";
+    summary.innerHTML = `<span class="hospital-memo-archive-date">${escapeHtml(formatHospitalMemoDate(new Date(row.created_at)))}</span><span class="hospital-memo-archive-name">${escapeHtml(archiveDisplayName(row))}</span>`;
+
+    const actions = document.createElement("div");
+    actions.className = "hospital-memo-archive-actions";
+    const open = document.createElement("button");
+    open.type = "button"; open.className = "hospital-memo-archive-card-open";
+    open.setAttribute("aria-label", "このメモを開く");
+    open.innerHTML = '開く <span aria-hidden="true">›</span>';
+    open.addEventListener("click", () => openMemoArchiveDetail(row.id));
+
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.className = "hospital-memo-archive-delete"; remove.setAttribute("aria-label", "このメモを削除");
+    remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>';
+    remove.addEventListener("click", (event) => { event.stopPropagation(); openMemoDeleteConfirm(row); });
+    actions.append(open, remove);
+    card.append(summary, actions); root.append(card);
+  });
+}
+
+async function loadMemoArchiveList({ reset = false } = {}) {
+  if (!memoStore) return;
+  const requestId = ++memoListRequestId;
+  const requestUserId = getAuthenticatedUserId();
+  if (reset) archiveRows = [];
+  setArchiveStatus("読み込んでいるにゃん…");
+  const from = archiveRows.length;
+  const result = await memoStore.list({ from, to: from + ARCHIVE_PAGE_SIZE - 1 });
+  if (requestId !== memoListRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-archive-list") return;
+  if (!result.ok) { setArchiveStatus("うまく読み込めなかったにゃん。時間をおいてもう一度開いてね"); return; }
+  archiveRows = archiveRows.concat(result.rows); renderMemoArchiveList(archiveRows);
+  const more = document.querySelector("#hospitalMemoArchiveMore"); if (more) more.hidden = result.rows.length < ARCHIVE_PAGE_SIZE;
+  setArchiveStatus("");
+}
+
+function toMemoViewModel(row) {
+  const cat = row.cat_snapshot || {}, health = row.health_snapshot || {}, content = row.memo_content || {};
+  return { createdAt: formatHospitalMemoDate(new Date(row.created_at)), basic: { name: cat.name || "", breed: cat.breed || "", sex: cat.sex || "", neuter: cat.neuter || "", ageText: cat.ageText || "", weight: health.weight || "", conditions: health.conditions || "", allergies: health.allergies || "", medicines: health.medicines || "", temperature: content.temperature || "" }, groups: content.groups || [], additional: content.additional || "", questions: content.questions || "" };
+}
+
+function canPrintArchiveDetail() {
+  if (getActiveViewId() !== "hospital-memo-archive") return false;
+  if (!isAuthResolved() || !isAuthenticated()) return false;
+  if (!printableMemoId || !printableOwnerId) return false;
+  if (printableOwnerId !== getAuthenticatedUserId()) return false;
+  if (!archiveDetailMemoId) return false;
+  if (archiveDetailMemoId !== printableMemoId) return false;
+  return true;
+}
+
+function syncArchivePrintState() {
+  const ready = canPrintArchiveDetail();
+  const inDetail = getActiveViewId() === "hospital-memo-archive";
+  if (inDetail) document.body.dataset.print = ready ? "ready" : "blocked";
+  else delete document.body.dataset.print;
+  const button = document.querySelector("#hospitalMemoPdf");
+  if (button) button.disabled = !ready;
+}
+
+async function openMemoArchiveDetail(memoId) {
+  if (!memoStore) return;
+  archiveDetailMemoId = memoId;
+  printableMemoId = null;
+  printableOwnerId = null;
+  syncArchivePrintState();
+  const requestId = ++memoDetailRequestId, requestUserId = getAuthenticatedUserId();
+  const result = await memoStore.get(memoId);
+  if (requestId !== memoDetailRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-archive-list") return;
+  if (!result.ok) { setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね"); syncArchivePrintState(); return; }
+  if (result.row.id !== memoId) { setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね"); syncArchivePrintState(); return; }
+  renderHospitalMemoDisplay(toMemoViewModel(result.row), "#hospitalMemoArchiveOutput");
+  document.querySelector("#hospitalMemoArchiveSavedAt").textContent = `保存日時：${formatHospitalMemoDate(new Date(result.row.created_at))}`;
+  setActiveView("hospital-memo-archive", { history: "push" });
+  printableMemoId = memoId;
+  printableOwnerId = requestUserId;
+  syncArchivePrintState();
+}
+
+function closeMemoDeleteConfirm() { const dialog = document.querySelector("#hospitalMemoDeleteConfirm"), error = document.querySelector("#hospitalMemoDeleteError"); if (dialog) dialog.hidden = true; if (error) { error.hidden = true; error.textContent = ""; } }
+function openMemoDeleteConfirm(row) { const target = document.querySelector("#hospitalMemoDeleteTarget"); if (target) target.textContent = `${archiveDisplayName(row)}／${formatHospitalMemoDate(new Date(row.created_at))} に保存`; deleteTargetId = row.id; const dialog = document.querySelector("#hospitalMemoDeleteConfirm"); if (dialog) dialog.hidden = false; }
+function setDeleteButtonsDisabled(disabled) { document.querySelector("#hospitalMemoDeleteApply").disabled = disabled; document.querySelector("#hospitalMemoDeleteCancel").disabled = disabled; }
+function setDeleteError(message) { const error = document.querySelector("#hospitalMemoDeleteError"); if (error) { error.hidden = !message; error.textContent = message; } }
+function removeArchiveCard(id) { archiveRows = archiveRows.filter((row) => row.id !== id); renderMemoArchiveList(archiveRows); }
+
+async function applyMemoDelete() {
+  if (!memoStore || !deleteTargetId) return;
+  const requestId = ++memoDeleteRequestId, requestUserId = getAuthenticatedUserId(), targetId = deleteTargetId;
+  setDeleteButtonsDisabled(true);
+  const result = await memoStore.remove(targetId);
+  if (requestId !== memoDeleteRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-archive-list") return;
+  setDeleteButtonsDisabled(false);
+  if (!result.ok) { setDeleteError("削除できなかったにゃん。通信を確認して、もう一度ためしてね🐾"); return; }
+  if (result.count === 0) { setDeleteError("削除できたか確認できませんでした。一覧をもう一度読み込んでから確かめてね🐾"); return; }
+  closeMemoDeleteConfirm(); removeArchiveCard(targetId); showToast("削除したにゃん🐾");
 }
 
 document.querySelector("#hospitalMemoForm")?.addEventListener("submit", (event) => {
@@ -3237,7 +3438,12 @@ document.querySelector("#hospitalMemoForm")?.addEventListener("submit", (event) 
   });
   hospitalMemoState.additional = data.get("additional")?.trim() || "";
   hospitalMemoState.questions = data.get("questions")?.trim() || "";
+  hospitalMemoDraftKey = `d-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  pendingMemoSave = null;
+  setMemoSaveButton("idle");
+  setMemoSaveNote("");
   renderHospitalMemoDisplay();
+  syncHospitalMemoArchiveControls();
   showView("hospital-memo-display");
 });
 
@@ -3290,6 +3496,29 @@ document.querySelector("#hospitalMemoEdit")?.addEventListener("click", () => {
   renderHospitalMemoEditor();
   showView("hospital-memo-editor");
 });
+
+document.querySelector("#hospitalMemoSave")?.addEventListener("click", onHospitalMemoSaveClick);
+document.querySelector("#hospitalMemoArchiveOpen")?.addEventListener("click", () => {
+  if (!isAuthResolved() || !isAuthenticated()) return;
+  if (!commitDraftBeforeArchive()) {
+    showToast("いまの入力を保存できなかったので、保存したメモを開けませんでした。少し待ってからもう一度ためしてね🐾");
+    return;
+  }
+  setActiveView("hospital-memo-archive-list", { history: "push" });
+  loadMemoArchiveList({ reset: true });
+});
+document.querySelector("#hospitalMemoArchiveMore")?.addEventListener("click", () => loadMemoArchiveList());
+document.querySelector("#hospitalMemoArchiveBack")?.addEventListener("click", () => openHospitalMemoTop());
+document.querySelector("#hospitalMemoArchiveToList")?.addEventListener("click", () => { setActiveView("hospital-memo-archive-list", { history: "replace" }); loadMemoArchiveList({ reset: true }); });
+document.querySelector("#hospitalMemoPdf")?.addEventListener("click", () => {
+  syncArchivePrintState();
+  if (!canPrintArchiveDetail()) { showToast("いまは印刷できません。メモをもう一度開いてからためしてね🐾"); return; }
+  window.print();
+});
+document.querySelector("#hospitalMemoDeleteApply")?.addEventListener("click", applyMemoDelete);
+document.querySelector("#hospitalMemoDeleteCancel")?.addEventListener("click", closeMemoDeleteConfirm);
+document.querySelector("#hospitalMemoGuideLogin")?.addEventListener("click", () => requestAuthentication());
+document.querySelector("#hospitalMemoGuideContinue")?.addEventListener("click", () => startNewHospitalMemo());
 
 document.querySelector("#hospitalMemoTopNew")?.addEventListener("click", () => {
   if (hasHospitalMemoDraft()) {
@@ -3558,8 +3787,12 @@ const HOSPITAL_MANUAL_CAT_APPLY_LABEL = "切り替える";
 const HOSPITAL_MANUAL_CAT_OVERWRITE_DETAIL = "猫ちゃんの基本情報・健康情報は空欄になります。<br>入力中の症状や相談メモはそのまま残ります。";
 const HOSPITAL_MEMO_BASIC_KEYS = ["name", "breed", "sex", "neuter", "birthdate", "estimatedAge", "weight", "temperature", "conditions", "allergies", "medicines"];
 const HOSPITAL_MEMO_BASIC_FIELDS = [...HOSPITAL_MEMO_BASIC_KEYS, "additional", "questions"];
+const ARCHIVE_VIEW_IDS = new Set(["hospital-memo-archive-list", "hospital-memo-archive"]);
+const ARCHIVE_PAGE_SIZE = 10;
+const MEMO_SAVE_FAIL_NOTE = "保存を確認できませんでした。入力はそのまま残しています。\n「保存したメモ」に同じ内容がないか確かめてから、もう一度ためしてね🐾";
 let appStateSaveTimer;
 let supabaseClient = null;
+let memoStore = null;
 let authenticatedUser = null;
 let initialAuthResolved = false;
 let authMode = "login";
@@ -3568,6 +3801,45 @@ let authState = "pending";
 let initialRestoreHandled = false;
 let authResumeOwnerId;
 let authCallbackDetected = false;
+let memoSaveRequestId = 0;
+let memoListRequestId = 0;
+let memoDetailRequestId = 0;
+let memoDeleteRequestId = 0;
+let archiveRows = [];
+let deleteTargetId = null;
+let hospitalMemoDraftKey = null;
+let pendingMemoSave = null;
+let pendingCommitToken = null;
+let archiveDetailMemoId = null;
+let printableMemoId = null;
+let printableOwnerId = null;
+
+function createSupabaseMemoStore(client) {
+  return {
+    async insert(row) {
+      const { error } = await client.from("hospital_memos").insert(row);
+      if (!error) return { ok: true };
+      if (error.code === "23505") return { ok: false, kind: "duplicate" };
+      return { ok: false, kind: "error" };
+    },
+    async findById(id) {
+      const { data, error } = await client.from("hospital_memos").select("user_id, cat_id, cat_snapshot, health_snapshot, memo_content").eq("id", id).maybeSingle();
+      return error ? { ok: false } : { ok: true, row: data || null };
+    },
+    async list({ from, to }) {
+      const { data, error } = await client.from("hospital_memos").select("id, created_at, cat_snapshot").order("created_at", { ascending: false }).range(from, to);
+      return error ? { ok: false } : { ok: true, rows: data || [] };
+    },
+    async get(id) {
+      const { data, error } = await client.from("hospital_memos").select("id, created_at, cat_snapshot, health_snapshot, memo_content").eq("id", id).maybeSingle();
+      return error || !data ? { ok: false } : { ok: true, row: data };
+    },
+    async remove(id) {
+      const { data, error } = await client.from("hospital_memos").delete().eq("id", id).select("id");
+      return error ? { ok: false, kind: "error" } : { ok: true, count: (data || []).length };
+    }
+  };
+}
 
 function isAuthResolved() {
   return authState === "authenticated" || authState === "anonymous";
@@ -3673,9 +3945,11 @@ function getFlowSnapshot() {
 
 function saveAppState() {
   if (!isAuthResolved()) return;
+  if (ARCHIVE_VIEW_IDS.has(getActiveViewId())) return;
   try {
     const state = {
       ownerId: getAuthenticatedUserId(),
+      commitToken: pendingCommitToken,
       answers: cloneState(answers),
       acuteAnswers: cloneState(acuteAnswers),
       currentFlowKey,
@@ -3707,6 +3981,10 @@ function discardForeignAppState() {
   hospitalCatPickerRequestId += 1;
   hospitalCatLoadRequestId += 1;
   chatTargetRequestId += 1;
+  memoSaveRequestId += 1;
+  memoListRequestId += 1;
+  memoDetailRequestId += 1;
+  memoDeleteRequestId += 1;
   clearAppState();
   resetAccountScopedUi();
 }
@@ -3746,6 +4024,28 @@ function resetHospitalMemoState() {
   resetHospitalBirthdatePicker();
   syncHospitalBirthControlsFromDate();
   updateHospitalAgePreview();
+}
+
+function resetMemoArchiveUi() {
+  const cards = document.querySelector("#hospitalMemoArchiveCards");
+  const output = document.querySelector("#hospitalMemoArchiveOutput");
+  const more = document.querySelector("#hospitalMemoArchiveMore");
+  const savedAt = document.querySelector("#hospitalMemoArchiveSavedAt");
+  if (cards) cards.replaceChildren();
+  if (output) output.replaceChildren();
+  if (more) more.hidden = true;
+  if (savedAt) savedAt.textContent = "";
+  archiveRows = [];
+  deleteTargetId = null;
+  pendingMemoSave = null;
+  hospitalMemoDraftKey = null;
+  archiveDetailMemoId = null;
+  printableMemoId = null;
+  printableOwnerId = null;
+  closeMemoDeleteConfirm();
+  setMemoSaveButton("idle");
+  setMemoSaveNote("");
+  syncArchivePrintState();
 }
 
 function resetManualMemoForm() {
@@ -3792,6 +4092,7 @@ function resetAccountScopedUi() {
   resetChatConversationUi();
   resetAuthForm();
   resetHospitalMemoTopUi();
+  resetMemoArchiveUi();
   resetSymptomFlowState();
 }
 
@@ -4042,6 +4343,18 @@ async function restoreViewFromHistory(viewId, historyState = {}) {
     return;
   }
 
+  if (viewId === "hospital-memo-archive-list") {
+    setActiveView(viewId, { history: "none" });
+    loadMemoArchiveList({ reset: true });
+    return;
+  }
+
+  if (viewId === "hospital-memo-archive") {
+    setActiveView("hospital-memo-archive-list", { history: "replace" });
+    loadMemoArchiveList({ reset: true });
+    return;
+  }
+
   window.NekoCats?.leaveForHistoryNavigation?.();
   if (viewId === "hospital-memo-top") {
     renderHospitalMemoTop();
@@ -4156,6 +4469,7 @@ function updateAuthMenu() {
   }
   if (accountButton) accountButton.hidden = !isAuthenticated();
   window.NekoCats?.onAuthChanged?.();
+  syncHospitalMemoArchiveControls();
 }
 
 function closeAuthMenu() {
@@ -4442,6 +4756,7 @@ async function initializeAuth() {
         autoRefreshToken: true
       }
     });
+    memoStore = createSupabaseMemoStore(supabaseClient);
 
     const { data, error } = await supabaseClient.auth.getSession();
     if (error) {
@@ -4500,6 +4815,7 @@ async function initializeAuth() {
     });
   } catch (error) {
     supabaseClient = null;
+    memoStore = null;
     authenticatedUser = null;
     authState = "unknown";
     initialAuthResolved = true;
