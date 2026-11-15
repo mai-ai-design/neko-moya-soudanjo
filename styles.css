@@ -2012,7 +2012,11 @@ textarea {
   body[data-print="blocked"] #hospitalMemoArchiveSavedAt,
   body[data-print="blocked"] #hospitalMemoArchiveOutput { display: none !important; }
   @page { size: A4 portrait; margin: 15mm; }
-  body[data-print="ready"] { background: #FFFFFF !important; color: #333333 !important; }
+  body[data-print="ready"] {
+    min-height: 0 !important;
+    background: #FFFFFF !important;
+    color: #333333 !important;
+  }
   body[data-print="ready"] #hospitalMemoArchiveOutput {
     display: block !important;
     background: #FFFFFF !important;
