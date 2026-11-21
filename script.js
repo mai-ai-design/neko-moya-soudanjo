@@ -1972,8 +1972,10 @@ function setActiveView(viewId, { scroll = true, history = "none", historyState =
     archiveDetailMemoId = null;
     printableMemoId = null;
     printableOwnerId = null;
+    resetMemoShareState();
   }
   syncArchivePrintState();
+  syncArchiveShareState();
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -2623,6 +2625,7 @@ function hasManualMemoDraft() {
 }
 
 function hasHospitalMemoDraft() {
+  if (isCurrentMemoSaved()) return false;
   return hasHospitalMemoStateContent() || hasHospitalMemoConsultationContent() || hasManualMemoDraft();
 }
 
@@ -3232,12 +3235,22 @@ function renderHospitalMemoDisplay(memo = hospitalMemoState, rootSelector = "#ho
   `;
 }
 
-function setMemoSaveButton(state) {
+function syncMemoSaveButton() {
   const button = document.querySelector("#hospitalMemoSave");
   if (!button) return;
+  let state;
+  if (memoSaveUiState === "saving") state = "saving";
+  else if (isCurrentMemoSaved()) state = "saved";
+  else if (memoSaveUiState === "retry") state = "retry";
+  else state = "idle";
   const labels = { idle: "💾 このメモを保存する", saving: "保存しているにゃん…", saved: "保存しました", retry: "もう一度保存する" };
-  button.textContent = labels[state] || labels.idle;
-  button.disabled = state === "saving";
+  button.textContent = labels[state];
+  button.disabled = state === "saving" || state === "saved";
+}
+
+function setMemoSaveButton(state) {
+  memoSaveUiState = state === "saving" || state === "retry" ? state : "idle";
+  syncMemoSaveButton();
 }
 
 function setMemoSaveNote(message) {
@@ -3258,6 +3271,10 @@ function syncHospitalMemoArchiveControls() {
   if (archiveOpen) archiveOpen.disabled = !canSave;
   if (archiveNote) { archiveNote.hidden = canSave; archiveNote.textContent = canSave ? "" : "ログインすると、保存したメモを見られます🐾"; }
   if (guide) guide.hidden = canSave;
+  const savedToList = document.querySelector("#hospitalMemoSavedToList");
+  const saved = isCurrentMemoSaved();
+  if (savedToList) savedToList.hidden = !canSave || !saved;
+  syncMemoSaveButton();
 }
 
 function buildHospitalMemoRow() {
@@ -3272,9 +3289,39 @@ function buildHospitalMemoRow() {
   };
 }
 
+function buildMemoSignatureFrom(row, basic) {
+  const catSnapshot = { ...row.cat_snapshot };
+  delete catSnapshot.ageText;
+  return JSON.stringify({
+    cat_id: row.cat_id,
+    cat_snapshot: catSnapshot,
+    health_snapshot: row.health_snapshot,
+    memo_content: row.memo_content,
+    birthdate: (basic && basic.birthdate) || "",
+    estimatedAge: (basic && basic.estimatedAge) || ""
+  });
+}
+
+function buildCurrentMemoSignature() {
+  return buildMemoSignatureFrom(buildHospitalMemoRow(), hospitalMemoState.basic || {});
+}
+
+function isCurrentMemoSaved() {
+  if (!savedMemoMark) return false;
+  if (savedMemoMark.ownerId !== getAuthenticatedUserId()) return false;
+  return savedMemoMark.signature === buildCurrentMemoSignature();
+}
+
 function ensurePendingMemoSave(userId) {
   if (pendingMemoSave && pendingMemoSave.userId === userId && pendingMemoSave.draftKey === hospitalMemoDraftKey) return pendingMemoSave;
-  pendingMemoSave = { id: crypto.randomUUID(), userId, draftKey: hospitalMemoDraftKey, payload: buildHospitalMemoRow() };
+  const payload = cloneState(buildHospitalMemoRow());
+  pendingMemoSave = {
+    id: crypto.randomUUID(),
+    userId,
+    draftKey: hospitalMemoDraftKey,
+    payload,
+    signature: buildMemoSignatureFrom(payload, hospitalMemoState.basic || {})
+  };
   return pendingMemoSave;
 }
 
@@ -3282,22 +3329,32 @@ function isSameMemoPayload(row, payload, userId) {
   return row?.user_id === userId && row.cat_id === payload.cat_id && JSON.stringify(row.cat_snapshot || {}) === JSON.stringify(payload.cat_snapshot) && JSON.stringify(row.health_snapshot || {}) === JSON.stringify(payload.health_snapshot) && JSON.stringify(row.memo_content || {}) === JSON.stringify(payload.memo_content);
 }
 
-function finishMemoSaveSuccess() { pendingMemoSave = null; setMemoSaveButton("saved"); setMemoSaveNote(""); showToast("保存したにゃん🐾 「保存したメモ」からいつでも開けるよ"); }
+function finishMemoSaveSuccess(pending, requestId) {
+  if (requestId !== memoSaveRequestId) return;
+  if (pendingMemoSave === pending) pendingMemoSave = null;
+  savedMemoMark = { ownerId: pending.userId, memoId: pending.id, signature: pending.signature };
+  memoSaveUiState = "idle";
+  setMemoSaveNote("");
+  syncHospitalMemoArchiveControls();
+  saveAppState();
+  showToast("保存したにゃん🐾 「保存したメモ」からいつでも開けるよ");
+}
 function failMemoSave() { setMemoSaveButton("retry"); setMemoSaveNote(MEMO_SAVE_FAIL_NOTE); }
 
 async function onHospitalMemoSaveClick() {
   if (!isAuthResolved() || !isAuthenticated() || !memoStore) return;
+  if (isCurrentMemoSaved()) return;
   const requestId = ++memoSaveRequestId;
   const requestUserId = getAuthenticatedUserId();
   const pending = ensurePendingMemoSave(requestUserId);
   setMemoSaveButton("saving");
   const result = await memoStore.insert({ id: pending.id, user_id: requestUserId, ...pending.payload });
   if (requestId !== memoSaveRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-display") return;
-  if (result.ok) { finishMemoSaveSuccess(); return; }
+  if (result.ok) { finishMemoSaveSuccess(pending, requestId); return; }
   if (result.kind === "duplicate") {
     const check = await memoStore.findById(pending.id);
     if (requestId !== memoSaveRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-display") return;
-    if (check.ok && check.row && isSameMemoPayload(check.row, pending.payload, requestUserId)) { finishMemoSaveSuccess(); return; }
+    if (check.ok && check.row && isSameMemoPayload(check.row, pending.payload, requestUserId)) { finishMemoSaveSuccess(pending, requestId); return; }
   }
   failMemoSave();
 }
@@ -3370,6 +3427,45 @@ function toMemoViewModel(row) {
   return { createdAt: formatHospitalMemoDate(new Date(row.created_at)), basic: { name: cat.name || "", breed: cat.breed || "", sex: cat.sex || "", neuter: cat.neuter || "", ageText: cat.ageText || "", weight: health.weight || "", conditions: health.conditions || "", allergies: health.allergies || "", medicines: health.medicines || "", temperature: content.temperature || "" }, groups: content.groups || [], additional: content.additional || "", questions: content.questions || "" };
 }
 
+function buildMemoShareText(memo) {
+  const basic = memo.basic || {};
+  const lines = ["病院で見せるメモ", `保存日時：${memo.createdAt || ""}`, ""];
+  const basicEntries = [
+    ["名前", basic.name], ["猫種", basic.breed], ["性別", basic.sex], ["避妊・去勢", basic.neuter],
+    ["年齢", basic.ageText || getHospitalMemoAge(basic)], ["体重", formatHospitalMemoUnit(basic.weight, "kg")],
+    ["体温", formatHospitalMemoUnit(basic.temperature, "℃")], ["持病", basic.conditions],
+    ["アレルギー", basic.allergies], ["服薬", basic.medicines]
+  ].filter(([, value]) => value);
+  if (basicEntries.length) {
+    lines.push("【猫の情報】");
+    basicEntries.forEach(([label, value]) => lines.push(`${label}：${value}`));
+    lines.push("");
+  }
+  (memo.groups || []).forEach((group) => {
+    const entries = (group.entries || []).filter((entry) => entry.value);
+    if (!entries.length) return;
+    lines.push(`【${group.title}】`);
+    entries.forEach((entry) => lines.push(`${entry.label}：${entry.value}`));
+    lines.push("");
+  });
+  const extras = [["追加で伝えたいこと", memo.additional], ["獣医さんに聞きたいこと", memo.questions]].filter(([, value]) => value);
+  if (extras.length) {
+    lines.push("【追加情報】");
+    extras.forEach(([label, value]) => lines.push(`${label}：${value}`));
+    lines.push("");
+  }
+  lines.push("飼い主が入力した内容を整理したメモです。", "診断結果ではありません。");
+  return lines.join("\n");
+}
+
+const SHARE_FAILED_ERROR_NAMES = new Set(["NotAllowedError", "NotSupportedError", "TypeError", "DataError", "InvalidStateError", "SecurityError"]);
+function classifyShareError(error) {
+  const name = error && typeof error.name === "string" ? error.name : "";
+  if (name === "AbortError") return "aborted";
+  if (SHARE_FAILED_ERROR_NAMES.has(name)) return "failed";
+  return "unknown";
+}
+
 function canPrintArchiveDetail() {
   if (getActiveViewId() !== "hospital-memo-archive") return false;
   if (!isAuthResolved() || !isAuthenticated()) return false;
@@ -3389,23 +3485,172 @@ function syncArchivePrintState() {
   if (button) button.disabled = !ready;
 }
 
+function canShareArchiveDetail() {
+  return canPrintArchiveDetail()
+    && Boolean(shareSourceText)
+    && shareSourceMemoId === archiveDetailMemoId
+    && shareSourceOwnerId === getAuthenticatedUserId();
+}
+
+function setMemoShareStatus(message) {
+  const status = document.querySelector("#hospitalMemoShareStatus");
+  if (!status) return;
+  status.hidden = !message;
+  status.textContent = message;
+}
+
+function isMemoSharePanelOpen() {
+  const overlay = document.querySelector("#hospitalMemoShareOverlay");
+  return Boolean(overlay) && !overlay.hidden;
+}
+
+function setMemoShareBackgroundInert(enabled) {
+  const shell = document.querySelector(".app-shell");
+  const archive = document.querySelector("#hospital-memo-archive");
+  const shareArea = document.querySelector("#hospitalMemoShareArea");
+  if (!shell || !archive || !shareArea) return;
+  if (!enabled) {
+    memoShareBackgroundStates.forEach((state, element) => {
+      element.inert = state.inert;
+      if (state.ariaHidden === null) element.removeAttribute("aria-hidden");
+      else element.setAttribute("aria-hidden", state.ariaHidden);
+    });
+    memoShareBackgroundStates.clear();
+    return;
+  }
+  const targets = [
+    shell.querySelector(".site-header"),
+    shell.querySelector(".site-footer"),
+    document.querySelector(".bottom-nav"),
+    document.querySelector("#toast"),
+    ...shell.querySelectorAll("main > .view:not(#hospital-memo-archive)"),
+    ...[...archive.children].filter((element) => element.id !== "hospitalMemoShareArea"),
+    ...[...shareArea.children].filter((element) => element.id !== "hospitalMemoShareOverlay")
+  ].filter(Boolean);
+  targets.forEach((element) => {
+    if (!memoShareBackgroundStates.has(element)) {
+      memoShareBackgroundStates.set(element, { inert: element.inert, ariaHidden: element.getAttribute("aria-hidden") });
+    }
+    element.inert = true;
+    element.setAttribute("aria-hidden", "true");
+  });
+}
+
+function restoreMemoShareFocus() {
+  if (!shareReturnFocusId) return;
+  const target = document.querySelector(shareReturnFocusId);
+  shareReturnFocusId = null;
+  if (!target || target.disabled || target.offsetParent === null) return;
+  target.focus();
+}
+
+function closeMemoSharePanel({ restoreFocus = false } = {}) {
+  const overlay = document.querySelector("#hospitalMemoShareOverlay");
+  const guide = document.querySelector("#hospitalMemoSharePdfGuide");
+  const guideOpen = document.querySelector("#hospitalMemoSharePdfGuideOpen");
+  const preview = document.querySelector("#hospitalMemoSharePreview");
+  const wasOpen = isMemoSharePanelOpen();
+  setMemoShareBackgroundInert(false);
+  if (overlay) overlay.hidden = true;
+  if (guide) guide.hidden = true;
+  if (guideOpen) guideOpen.setAttribute("aria-expanded", "false");
+  if (preview) preview.value = "";
+  setMemoShareStatus("");
+  if (restoreFocus && wasOpen) restoreMemoShareFocus();
+  else shareReturnFocusId = null;
+}
+
+function getMemoShareFocusables() {
+  const panel = document.querySelector("#hospitalMemoSharePanel");
+  if (!panel) return [];
+  return [...panel.querySelectorAll("button, textarea, [href], input, select, [tabindex]:not([tabindex='-1'])")]
+    .filter((element) => !element.disabled && element.offsetParent !== null);
+}
+
+function syncArchiveShareState() {
+  const ready = canShareArchiveDetail();
+  const busy = shareBusy || copyBusy;
+  const open = document.querySelector("#hospitalMemoShareOpen");
+  if (open) open.disabled = !ready || busy;
+  ["#hospitalMemoShareSend", "#hospitalMemoShareCopy", "#hospitalMemoSharePdfGuideOpen", "#hospitalMemoShareClose"]
+    .forEach((selector) => { const button = document.querySelector(selector); if (button) button.disabled = !ready || busy; });
+  if (!ready) closeMemoSharePanel();
+  if (isMemoSharePanelOpen() && !getMemoShareFocusables().length) document.querySelector("#hospitalMemoSharePanel")?.focus();
+}
+
+function resetMemoShareState() {
+  shareRequestId += 1;
+  shareSourceMemoId = null;
+  shareSourceOwnerId = null;
+  shareSourceText = null;
+  shareBusy = false;
+  copyBusy = false;
+  closeMemoSharePanel();
+  syncArchiveShareState();
+}
+
+function handleMemoSharePanelKeydown(event) {
+  if (!isMemoSharePanelOpen()) return;
+  if (event.key === "Escape") {
+    if (shareBusy || copyBusy) return;
+    event.preventDefault();
+    closeMemoSharePanel({ restoreFocus: true });
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusables = getMemoShareFocusables();
+  if (!focusables.length) {
+    event.preventDefault();
+    document.querySelector("#hospitalMemoSharePanel")?.focus();
+    return;
+  }
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  if (!event.shiftKey && (active === last || !focusables.includes(active))) {
+    event.preventDefault();
+    first.focus();
+  } else if (event.shiftKey && (active === first || !focusables.includes(active))) {
+    event.preventDefault();
+    last.focus();
+  }
+}
+document.addEventListener("keydown", handleMemoSharePanelKeydown);
+
 async function openMemoArchiveDetail(memoId) {
   if (!memoStore) return;
   archiveDetailMemoId = memoId;
   printableMemoId = null;
   printableOwnerId = null;
+  resetMemoShareState();
   syncArchivePrintState();
   const requestId = ++memoDetailRequestId, requestUserId = getAuthenticatedUserId();
   const result = await memoStore.get(memoId);
   if (requestId !== memoDetailRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-archive-list") return;
-  if (!result.ok) { setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね"); syncArchivePrintState(); return; }
-  if (result.row.id !== memoId) { setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね"); syncArchivePrintState(); return; }
+  if (!result.ok) {
+    setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね");
+    resetMemoShareState();
+    syncArchivePrintState();
+    syncArchiveShareState();
+    return;
+  }
+  if (result.row.id !== memoId) {
+    setArchiveStatus("このメモを開けなかったにゃん。時間をおいてためしてね");
+    resetMemoShareState();
+    syncArchivePrintState();
+    syncArchiveShareState();
+    return;
+  }
   renderHospitalMemoDisplay(toMemoViewModel(result.row), "#hospitalMemoArchiveOutput");
   document.querySelector("#hospitalMemoArchiveSavedAt").textContent = `保存日時：${formatHospitalMemoDate(new Date(result.row.created_at))}`;
   setActiveView("hospital-memo-archive", { history: "push" });
   printableMemoId = memoId;
   printableOwnerId = requestUserId;
+  shareSourceMemoId = memoId;
+  shareSourceOwnerId = requestUserId;
+  shareSourceText = buildMemoShareText(toMemoViewModel(result.row));
   syncArchivePrintState();
+  syncArchiveShareState();
 }
 
 function closeMemoDeleteConfirm() { const dialog = document.querySelector("#hospitalMemoDeleteConfirm"), error = document.querySelector("#hospitalMemoDeleteError"); if (dialog) dialog.hidden = true; if (error) { error.hidden = true; error.textContent = ""; } }
@@ -3507,6 +3752,12 @@ document.querySelector("#hospitalMemoArchiveOpen")?.addEventListener("click", ()
   setActiveView("hospital-memo-archive-list", { history: "push" });
   loadMemoArchiveList({ reset: true });
 });
+document.querySelector("#hospitalMemoSavedToList")?.addEventListener("click", () => {
+  if (!isCurrentMemoSaved()) return;
+  saveAppState();
+  setActiveView("hospital-memo-archive-list", { history: "replace" });
+  loadMemoArchiveList({ reset: true });
+});
 document.querySelector("#hospitalMemoArchiveMore")?.addEventListener("click", () => loadMemoArchiveList());
 document.querySelector("#hospitalMemoArchiveBack")?.addEventListener("click", () => openHospitalMemoTop());
 document.querySelector("#hospitalMemoArchiveToList")?.addEventListener("click", () => { setActiveView("hospital-memo-archive-list", { history: "replace" }); loadMemoArchiveList({ reset: true }); });
@@ -3514,6 +3765,72 @@ document.querySelector("#hospitalMemoPdf")?.addEventListener("click", () => {
   syncArchivePrintState();
   if (!canPrintArchiveDetail()) { showToast("いまは印刷できません。メモをもう一度開いてからためしてね🐾"); return; }
   window.print();
+});
+document.querySelector("#hospitalMemoShareOpen")?.addEventListener("click", () => {
+  syncArchivePrintState();
+  syncArchiveShareState();
+  if (!canShareArchiveDetail()) { showToast("いまは共有できません。メモをもう一度開いてからためしてね🐾"); return; }
+  const overlay = document.querySelector("#hospitalMemoShareOverlay");
+  const preview = document.querySelector("#hospitalMemoSharePreview");
+  if (preview) preview.value = shareSourceText;
+  if (overlay) overlay.hidden = false;
+  shareReturnFocusId = "#hospitalMemoShareOpen";
+  setMemoShareStatus("");
+  setMemoShareBackgroundInert(true);
+  document.querySelector("#hospitalMemoShareSend")?.focus();
+});
+document.querySelector("#hospitalMemoShareClose")?.addEventListener("click", () => {
+  if (!shareBusy && !copyBusy) closeMemoSharePanel({ restoreFocus: true });
+});
+document.querySelector("#hospitalMemoSharePdfGuideOpen")?.addEventListener("click", (event) => {
+  const guide = document.querySelector("#hospitalMemoSharePdfGuide");
+  if (!guide) return;
+  guide.hidden = !guide.hidden;
+  event.currentTarget.setAttribute("aria-expanded", guide.hidden ? "false" : "true");
+});
+document.querySelector("#hospitalMemoShareSend")?.addEventListener("click", async () => {
+  syncArchivePrintState();
+  syncArchiveShareState();
+  if (!canShareArchiveDetail()) { showToast("いまは共有できません。メモをもう一度開いてからためしてね🐾"); return; }
+  if (shareBusy || copyBusy) return;
+  if (typeof navigator.share !== "function") { setMemoShareStatus("この端末では共有画面を開けません。「本文をコピー」で送れます🐾"); return; }
+  const requestId = ++shareRequestId;
+  const requestUserId = getAuthenticatedUserId();
+  const requestMemoId = archiveDetailMemoId;
+  const text = shareSourceText;
+  shareBusy = true;
+  syncArchiveShareState();
+  let outcome = "resolved";
+  try { await navigator.share({ text }); } catch (error) { outcome = classifyShareError(error); } finally {
+    const mine = requestId === shareRequestId && getAuthenticatedUserId() === requestUserId && getActiveViewId() === "hospital-memo-archive" && archiveDetailMemoId === requestMemoId;
+    if (mine) {
+      shareBusy = false;
+      syncArchiveShareState();
+      if (canShareArchiveDetail() && isMemoSharePanelOpen() && outcome === "failed") setMemoShareStatus("共有画面を開けませんでした。「本文をコピー」で送れます🐾");
+    }
+  }
+});
+document.querySelector("#hospitalMemoShareCopy")?.addEventListener("click", async () => {
+  syncArchivePrintState();
+  syncArchiveShareState();
+  if (!canShareArchiveDetail()) { showToast("いまは共有できません。メモをもう一度開いてからためしてね🐾"); return; }
+  if (shareBusy || copyBusy) return;
+  if (typeof navigator.clipboard?.writeText !== "function") { setMemoShareStatus("この端末では自動コピーできません。上の本文を選んでコピーしてね🐾"); return; }
+  const requestId = ++shareRequestId;
+  const requestUserId = getAuthenticatedUserId();
+  const requestMemoId = archiveDetailMemoId;
+  const text = shareSourceText;
+  copyBusy = true;
+  syncArchiveShareState();
+  let copied = false;
+  try { await navigator.clipboard.writeText(text); copied = true; } catch { copied = false; } finally {
+    const mine = requestId === shareRequestId && getAuthenticatedUserId() === requestUserId && getActiveViewId() === "hospital-memo-archive" && archiveDetailMemoId === requestMemoId;
+    if (mine) {
+      copyBusy = false;
+      syncArchiveShareState();
+      if (canShareArchiveDetail() && isMemoSharePanelOpen()) setMemoShareStatus(copied ? "本文をコピーしました🐾" : "コピーできませんでした。上の本文を選んでコピーしてね🐾");
+    }
+  }
 });
 document.querySelector("#hospitalMemoDeleteApply")?.addEventListener("click", applyMemoDelete);
 document.querySelector("#hospitalMemoDeleteCancel")?.addEventListener("click", closeMemoDeleteConfirm);
@@ -3809,10 +4126,20 @@ let archiveRows = [];
 let deleteTargetId = null;
 let hospitalMemoDraftKey = null;
 let pendingMemoSave = null;
+let savedMemoMark = null;
+let memoSaveUiState = "idle";
 let pendingCommitToken = null;
 let archiveDetailMemoId = null;
 let printableMemoId = null;
 let printableOwnerId = null;
+let shareSourceMemoId = null;
+let shareSourceOwnerId = null;
+let shareSourceText = null;
+let shareRequestId = 0;
+let shareBusy = false;
+let copyBusy = false;
+let shareReturnFocusId = null;
+const memoShareBackgroundStates = new Map();
 
 function createSupabaseMemoStore(client) {
   return {
@@ -3956,6 +4283,7 @@ function saveAppState() {
       currentVomitQuestionIndex,
       acuteQuestionIndex,
       hospitalMemoState: cloneState(hospitalMemoState),
+      savedMemoMark: savedMemoMark ? { ...savedMemoMark } : null,
       forms: getFormDrafts(),
       activeView: getActiveViewId(),
       flow: getFlowSnapshot(),
@@ -3990,6 +4318,7 @@ function discardForeignAppState() {
 }
 
 function resetHospitalMemoState() {
+  savedMemoMark = null;
   hospitalMemoState.source = "";
   hospitalMemoState.createdAt = "";
   hospitalMemoState.catId = "";
@@ -4042,6 +4371,7 @@ function resetMemoArchiveUi() {
   archiveDetailMemoId = null;
   printableMemoId = null;
   printableOwnerId = null;
+  resetMemoShareState();
   closeMemoDeleteConfirm();
   setMemoSaveButton("idle");
   setMemoSaveNote("");
@@ -4087,6 +4417,7 @@ function resetSymptomFlowState() {
 }
 
 function resetAccountScopedUi() {
+  savedMemoMark = null;
   resetHospitalMemoState();
   resetManualMemoForm();
   resetChatConversationUi();
@@ -4269,6 +4600,12 @@ function restoreAppState() {
   Object.assign(hospitalMemoState, cloneState(state.hospitalMemoState));
   hospitalMemoState.catId = typeof state.hospitalMemoState.catId === "string" ? state.hospitalMemoState.catId : "";
   hospitalMemoState.photoPath = typeof state.hospitalMemoState.photoPath === "string" ? state.hospitalMemoState.photoPath : "";
+  const mark = state.savedMemoMark;
+  savedMemoMark = (mark && typeof mark === "object"
+    && typeof mark.ownerId === "string" && typeof mark.memoId === "string" && typeof mark.signature === "string"
+    && mark.ownerId === getAuthenticatedUserId())
+    ? { ownerId: mark.ownerId, memoId: mark.memoId, signature: mark.signature }
+    : null;
 
   if (state.activeView === "vomit-check") restoreGenericFlow(state.flow);
   if (state.activeView === "acute-detail") restoreAcuteFlow(state.flow);

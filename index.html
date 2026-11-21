@@ -2248,6 +2248,7 @@
           <article id="hospitalMemoOutput" class="hospital-memo-output" aria-live="polite"></article>
           <div id="hospitalMemoSaveArea" class="hospital-memo-save-area">
             <button id="hospitalMemoSave" class="primary-btn" type="button">💾 このメモを保存する</button>
+            <button id="hospitalMemoSavedToList" class="hospital-memo-saved-to-list" type="button" hidden><span class="hospital-memo-saved-to-list-main">保存したメモを見る</span></button>
             <p id="hospitalMemoSaveNote" class="hospital-memo-save-note" hidden></p>
           </div>
           <button id="hospitalMemoEdit" class="secondary-btn" type="button">編集する</button>
@@ -2272,6 +2273,28 @@
           <div id="hospitalMemoPdfArea" class="hospital-memo-pdf-area">
             <button id="hospitalMemoPdf" class="hospital-memo-pdf-btn" type="button" disabled>🖨 PDF保存・印刷</button>
             <p id="hospitalMemoPdfNote" class="hospital-memo-pdf-note">印刷画面からPDFとして保存できます。保存方法は端末によって異なります。</p>
+          </div>
+          <div id="hospitalMemoShareArea" class="hospital-memo-share-area">
+            <button id="hospitalMemoShareOpen" class="hospital-memo-share-btn" type="button" aria-haspopup="dialog" disabled>📤 共有する</button>
+            <p id="hospitalMemoShareNote" class="hospital-memo-share-note">家族や病院に、メモの内容を伝えられます。<br>送信先と内容を確認してから送ってね🐾</p>
+            <div id="hospitalMemoShareOverlay" class="hospital-memo-share-overlay" hidden>
+              <div id="hospitalMemoSharePanel" class="hospital-memo-share-panel" role="dialog" aria-modal="true" aria-labelledby="hospitalMemoSharePanelTitle" tabindex="-1">
+                <h2 id="hospitalMemoSharePanelTitle" class="hospital-memo-share-panel-title">共有する内容</h2>
+                <label id="hospitalMemoSharePreviewLabel" for="hospitalMemoSharePreview" class="hospital-memo-share-preview-label">共有する本文（確認用・編集できません）</label>
+                <textarea id="hospitalMemoSharePreview" class="hospital-memo-share-preview" readonly rows="10"></textarea>
+                <div class="hospital-memo-share-actions">
+                  <button id="hospitalMemoShareSend" class="hospital-memo-share-action" type="button">本文を共有</button>
+                  <button id="hospitalMemoShareCopy" class="hospital-memo-share-action" type="button">本文をコピー</button>
+                  <button id="hospitalMemoSharePdfGuideOpen" class="hospital-memo-share-action" type="button" aria-expanded="false" aria-controls="hospitalMemoSharePdfGuide"><span class="hospital-memo-share-action-main">PDFを保存して送る方法</span></button>
+                </div>
+                <div id="hospitalMemoSharePdfGuide" class="hospital-memo-share-pdf-guide" hidden>
+                  <ol><li>メモの「🖨 PDF保存・印刷」で端末へ保存する</li><li>保存したPDFを開く</li><li>PDF閲覧アプリやファイルアプリの「共有」を選ぶ</li><li>メール・LINEなどを選び、添付内容と送信先を確認して送る</li></ol>
+                  <p class="hospital-memo-share-pdf-note">押すだけでPDFが添付されるわけではありません。先にPDFを保存してね🐾</p>
+                </div>
+                <p id="hospitalMemoShareStatus" class="hospital-memo-share-status" role="status" hidden></p>
+                <button id="hospitalMemoShareClose" class="ghost-btn" type="button">閉じる</button>
+              </div>
+            </div>
           </div>
           <button id="hospitalMemoArchiveToList" class="ghost-btn" type="button">← 保存したメモ一覧へ</button>
         </section>
