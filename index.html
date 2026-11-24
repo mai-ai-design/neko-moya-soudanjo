@@ -2255,15 +2255,21 @@
         </section>
 
         <section id="hospital-memo-archive-list" class="view" aria-labelledby="hospital-memo-archive-list-title">
-          <div class="page-heading"><p class="eyebrow">病院メモ</p><h1 id="hospital-memo-archive-list-title">📂 保存したメモ</h1></div>
+          <div class="page-heading"><p class="eyebrow">病院メモ</p><h1 id="hospital-memo-archive-list-title" tabindex="-1">📂 保存したメモ</h1></div>
           <p id="hospitalMemoArchiveStatus" class="cat-status" hidden></p>
           <div id="hospitalMemoArchiveCards" class="hospital-memo-archive-cards"></div>
           <button id="hospitalMemoArchiveMore" class="ghost-btn" type="button" hidden>もっと見る</button>
           <button id="hospitalMemoArchiveBack" class="ghost-btn" type="button">← 病院メモにもどる</button>
-          <div id="hospitalMemoDeleteConfirm" class="hospital-memo-delete-confirm" hidden>
-            <p class="hospital-memo-draft-title">🗑 このメモを削除しますか？</p><p id="hospitalMemoDeleteTarget"></p><p>削除すると元に戻せません。</p>
-            <div class="hospital-memo-delete-actions"><button id="hospitalMemoDeleteApply" class="primary-btn" type="button">削除する</button><button id="hospitalMemoDeleteCancel" class="ghost-btn" type="button">やめる</button></div>
-            <p id="hospitalMemoDeleteError" class="hospital-memo-delete-error" aria-live="polite" hidden></p>
+          <div id="hospitalMemoDeleteOverlay" class="hospital-memo-delete-overlay" hidden>
+            <div id="hospitalMemoDeleteConfirm" class="hospital-memo-delete-panel" role="dialog" aria-modal="true" aria-labelledby="hospitalMemoDeleteTitle" tabindex="-1">
+              <div class="hospital-memo-delete-body">
+                <h2 id="hospitalMemoDeleteTitle" class="hospital-memo-delete-title">🗑 このメモを削除しますか？</h2>
+                <p id="hospitalMemoDeleteTarget"></p>
+                <p>削除すると元に戻せません。</p>
+                <p id="hospitalMemoDeleteError" class="hospital-memo-delete-error" role="status" hidden></p>
+              </div>
+              <div class="hospital-memo-delete-actions"><button id="hospitalMemoDeleteCancel" class="ghost-btn" type="button">やめる</button><button id="hospitalMemoDeleteApply" class="hospital-memo-delete-apply" type="button">削除する</button></div>
+            </div>
           </div>
         </section>
 

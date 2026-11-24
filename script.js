@@ -1974,6 +1974,7 @@ function setActiveView(viewId, { scroll = true, history = "none", historyState =
     printableOwnerId = null;
     resetMemoShareState();
   }
+  if (viewId !== "hospital-memo-archive-list") finishMemoDeleteSession();
   syncArchivePrintState();
   syncArchiveShareState();
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3399,9 +3400,9 @@ function renderMemoArchiveList(rows) {
     open.addEventListener("click", () => openMemoArchiveDetail(row.id));
 
     const remove = document.createElement("button");
-    remove.type = "button"; remove.className = "hospital-memo-archive-delete"; remove.setAttribute("aria-label", "このメモを削除");
+    remove.type = "button"; remove.id = `hospitalMemoArchiveDelete-${row.id}`; remove.className = "hospital-memo-archive-delete"; remove.setAttribute("aria-label", "削除の確認を開く");
     remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>';
-    remove.addEventListener("click", (event) => { event.stopPropagation(); openMemoDeleteConfirm(row); });
+    remove.addEventListener("click", (event) => { event.stopPropagation(); openMemoDeleteConfirm(row, `#${remove.id}`); });
     actions.append(open, remove);
     card.append(summary, actions); root.append(card);
   });
@@ -3653,22 +3654,110 @@ async function openMemoArchiveDetail(memoId) {
   syncArchiveShareState();
 }
 
-function closeMemoDeleteConfirm() { const dialog = document.querySelector("#hospitalMemoDeleteConfirm"), error = document.querySelector("#hospitalMemoDeleteError"); if (dialog) dialog.hidden = true; if (error) { error.hidden = true; error.textContent = ""; } }
-function openMemoDeleteConfirm(row) { const target = document.querySelector("#hospitalMemoDeleteTarget"); if (target) target.textContent = `${archiveDisplayName(row)}／${formatHospitalMemoDate(new Date(row.created_at))} に保存`; deleteTargetId = row.id; const dialog = document.querySelector("#hospitalMemoDeleteConfirm"); if (dialog) dialog.hidden = false; }
+function setMemoDeleteBackgroundInert(enabled) {
+  const shell = document.querySelector(".app-shell");
+  const list = document.querySelector("#hospital-memo-archive-list");
+  const area = document.querySelector("#hospitalMemoDeleteOverlay");
+  if (!enabled) {
+    memoDeleteBackgroundStates.forEach((state, element) => {
+      element.inert = state.inert;
+      if (state.ariaHidden === null) element.removeAttribute("aria-hidden");
+      else element.setAttribute("aria-hidden", state.ariaHidden);
+    });
+    memoDeleteBackgroundStates.clear();
+    return;
+  }
+  if (!shell || !list || !area) return;
+  const targets = [
+    shell.querySelector(".site-header"),
+    shell.querySelector(".site-footer"),
+    ...shell.querySelectorAll("main > .view:not(#hospital-memo-archive-list)"),
+    ...[...list.children].filter((element) => element.id !== "hospitalMemoDeleteOverlay"),
+    document.querySelector(".bottom-nav"),
+    document.querySelector("#toast")
+  ].filter(Boolean);
+  targets.forEach((element) => {
+    if (!memoDeleteBackgroundStates.has(element)) {
+      memoDeleteBackgroundStates.set(element, { inert: element.inert, ariaHidden: element.getAttribute("aria-hidden") });
+    }
+    element.inert = true;
+    element.setAttribute("aria-hidden", "true");
+  });
+}
+
+function openMemoDeleteConfirm(row, triggerId) {
+  const target = document.querySelector("#hospitalMemoDeleteTarget");
+  if (target) target.textContent = `${archiveDisplayName(row)}／${formatHospitalMemoDate(new Date(row.created_at))} に保存`;
+  deleteTargetId = row.id;
+  setDeleteError("");
+  memoDeleteBusy = false;
+  setDeleteButtonsDisabled(false);
+  memoDeleteReturnFocusId = triggerId || null;
+  const overlay = document.querySelector("#hospitalMemoDeleteOverlay");
+  if (overlay) overlay.hidden = false;
+  setMemoDeleteBackgroundInert(true);
+  document.querySelector("#hospitalMemoDeleteCancel")?.focus();
+}
+
+function releaseMemoDeleteBusy() {
+  memoDeleteBusy = false;
+  setDeleteButtonsDisabled(false);
+}
+
+function finishMemoDeleteSession({ restoreFocus = "none" } = {}) {
+  const overlay = document.querySelector("#hospitalMemoDeleteOverlay");
+  const wasOpen = Boolean(overlay) && !overlay.hidden;
+  if (overlay) overlay.hidden = true;
+  setMemoDeleteBackgroundInert(false);
+  setDeleteError("");
+  memoDeleteBusy = false;
+  setDeleteButtonsDisabled(false);
+  memoDeleteRequestId += 1;
+  deleteTargetId = null;
+  const returnId = memoDeleteReturnFocusId;
+  memoDeleteReturnFocusId = null;
+  if (!wasOpen) return;
+  if (restoreFocus === "trigger") {
+    const element = returnId ? document.querySelector(returnId) : null;
+    if (element && !element.disabled && element.offsetParent !== null) { element.focus(); return; }
+  }
+  if (restoreFocus === "list") document.querySelector("#hospital-memo-archive-list-title")?.focus();
+}
+
 function setDeleteButtonsDisabled(disabled) { document.querySelector("#hospitalMemoDeleteApply").disabled = disabled; document.querySelector("#hospitalMemoDeleteCancel").disabled = disabled; }
 function setDeleteError(message) { const error = document.querySelector("#hospitalMemoDeleteError"); if (error) { error.hidden = !message; error.textContent = message; } }
 function removeArchiveCard(id) { archiveRows = archiveRows.filter((row) => row.id !== id); renderMemoArchiveList(archiveRows); }
 
 async function applyMemoDelete() {
   if (!memoStore || !deleteTargetId) return;
-  const requestId = ++memoDeleteRequestId, requestUserId = getAuthenticatedUserId(), targetId = deleteTargetId;
+  if (memoDeleteBusy) return;
+  const requestId = ++memoDeleteRequestId;
+  const requestUserId = getAuthenticatedUserId();
+  const targetId = deleteTargetId;
+  memoDeleteBusy = true;
   setDeleteButtonsDisabled(true);
-  const result = await memoStore.remove(targetId);
-  if (requestId !== memoDeleteRequestId || getAuthenticatedUserId() !== requestUserId || getActiveViewId() !== "hospital-memo-archive-list") return;
-  setDeleteButtonsDisabled(false);
+  let result = null;
+  let threw = false;
+  try {
+    result = await memoStore.remove(targetId);
+  } catch (error) {
+    threw = true;
+  }
+  const mine = requestId === memoDeleteRequestId
+    && getAuthenticatedUserId() === requestUserId
+    && getActiveViewId() === "hospital-memo-archive-list"
+    && deleteTargetId === targetId;
+  if (!mine) return;
+  releaseMemoDeleteBusy();
+  if (threw || !result || typeof result !== "object") {
+    setDeleteError("通信が途切れて、削除できたか確認できませんでした。一覧をもう一度読み込んでから確かめてね🐾");
+    return;
+  }
   if (!result.ok) { setDeleteError("削除できなかったにゃん。通信を確認して、もう一度ためしてね🐾"); return; }
   if (result.count === 0) { setDeleteError("削除できたか確認できませんでした。一覧をもう一度読み込んでから確かめてね🐾"); return; }
-  closeMemoDeleteConfirm(); removeArchiveCard(targetId); showToast("削除したにゃん🐾");
+  finishMemoDeleteSession({ restoreFocus: "list" });
+  removeArchiveCard(targetId);
+  showToast("削除したにゃん🐾");
 }
 
 document.querySelector("#hospitalMemoForm")?.addEventListener("submit", (event) => {
@@ -3833,7 +3922,30 @@ document.querySelector("#hospitalMemoShareCopy")?.addEventListener("click", asyn
   }
 });
 document.querySelector("#hospitalMemoDeleteApply")?.addEventListener("click", applyMemoDelete);
-document.querySelector("#hospitalMemoDeleteCancel")?.addEventListener("click", closeMemoDeleteConfirm);
+document.querySelector("#hospitalMemoDeleteCancel")?.addEventListener("click", () => {
+  if (memoDeleteBusy) return;
+  finishMemoDeleteSession({ restoreFocus: "trigger" });
+});
+document.addEventListener("keydown", (event) => {
+  const overlay = document.querySelector("#hospitalMemoDeleteOverlay");
+  if (!overlay || overlay.hidden) return;
+  if (event.key === "Escape") {
+    if (memoDeleteBusy) return;
+    event.preventDefault();
+    document.querySelector("#hospitalMemoDeleteCancel")?.click();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const panel = document.querySelector("#hospitalMemoDeleteConfirm");
+  if (!panel) return;
+  const focusables = [...panel.querySelectorAll("button")].filter((button) => !button.disabled && button.offsetParent !== null);
+  if (!focusables.length) { event.preventDefault(); panel.focus(); return; }
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  if (!event.shiftKey && (active === last || !focusables.includes(active))) { event.preventDefault(); first.focus(); return; }
+  if (event.shiftKey && (active === first || !focusables.includes(active))) { event.preventDefault(); last.focus(); }
+});
 document.querySelector("#hospitalMemoGuideLogin")?.addEventListener("click", () => requestAuthentication());
 document.querySelector("#hospitalMemoGuideContinue")?.addEventListener("click", () => startNewHospitalMemo());
 
@@ -4124,6 +4236,9 @@ let memoDetailRequestId = 0;
 let memoDeleteRequestId = 0;
 let archiveRows = [];
 let deleteTargetId = null;
+let memoDeleteBusy = false;
+let memoDeleteReturnFocusId = null;
+const memoDeleteBackgroundStates = new Map();
 let hospitalMemoDraftKey = null;
 let pendingMemoSave = null;
 let savedMemoMark = null;
@@ -4365,14 +4480,13 @@ function resetMemoArchiveUi() {
   if (more) more.hidden = true;
   if (savedAt) savedAt.textContent = "";
   archiveRows = [];
-  deleteTargetId = null;
   pendingMemoSave = null;
   hospitalMemoDraftKey = null;
   archiveDetailMemoId = null;
   printableMemoId = null;
   printableOwnerId = null;
   resetMemoShareState();
-  closeMemoDeleteConfirm();
+  finishMemoDeleteSession();
   setMemoSaveButton("idle");
   setMemoSaveNote("");
   syncArchivePrintState();

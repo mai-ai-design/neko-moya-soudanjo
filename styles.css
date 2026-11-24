@@ -1533,6 +1533,21 @@ textarea {
 .hospital-memo-save-guide-actions,
 .hospital-memo-delete-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
+.hospital-memo-delete-overlay { position: fixed; z-index: 50; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, .35); }
+.hospital-memo-delete-panel { display: flex; flex-direction: column; width: 100%; max-width: 420px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 16px; border: 1px solid #E7CFC5; border-radius: 8px; background: #FFFFFF; color: #6B4F3F; gap: 12px; }
+.hospital-memo-delete-body { display: grid; gap: 8px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.hospital-memo-delete-title { margin: 0; font-size: 1.05rem; }
+.hospital-memo-delete-actions { flex: 0 0 auto; }
+.hospital-memo-delete-apply { min-height: 50px; border: 1px solid #A34F43; border-radius: 8px; background: #A34F43; color: #FFFFFF; font: inherit; font-weight: 700; }
+.hospital-memo-delete-apply:hover:not(:disabled) { background: #8E4238; }
+.hospital-memo-delete-apply:focus-visible,
+#hospitalMemoDeleteCancel:focus-visible { outline: 3px solid #C96A5B; outline-offset: 2px; }
+.hospital-memo-delete-apply:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (max-width: 480px) {
+  .hospital-memo-delete-actions { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 639px) {
   .hospital-memo-save-guide-actions {
     grid-template-columns: minmax(0, 1fr);
@@ -1714,7 +1729,7 @@ textarea {
 .hospital-memo-archive-delete:hover { border-color: #F1D9D3; background: #F5D8D1; color: #A34F43; }
 .hospital-memo-archive-card-open:focus-visible,
 .hospital-memo-archive-delete:focus-visible { outline: 3px solid #C96A5B; outline-offset: 2px; }
-.hospital-memo-archive-delete::after { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 4px 7px; border-radius: 6px; background: #4A423B; color: #FFFFFF; content: "削除する"; font-size: 12px; font-weight: 400; line-height: 1.2; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }
+.hospital-memo-archive-delete::after { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 4px 7px; border-radius: 6px; background: #4A423B; color: #FFFFFF; content: "削除の確認"; font-size: 12px; font-weight: 400; line-height: 1.2; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }
 .hospital-memo-archive-delete:hover::after,
 .hospital-memo-archive-delete:focus-visible::after { opacity: 1; }
 
@@ -2046,7 +2061,7 @@ textarea {
 
 @media print {
   .bottom-nav, .toast,
-  #hospitalMemoPdfArea, #hospitalMemoShareArea, #hospitalMemoArchiveToList { display: none !important; }
+  #hospitalMemoPdfArea, #hospitalMemoShareArea, #hospitalMemoDeleteOverlay, #hospitalMemoArchiveToList { display: none !important; }
   .hospital-memo-archive-delete::after { content: none !important; }
   body[data-print="ready"] .site-header,
   body[data-print="ready"] .site-footer { display: none !important; }
